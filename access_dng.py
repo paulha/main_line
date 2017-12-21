@@ -3,8 +3,8 @@ import requests
 #----------------------------------------------------
 #       Fill in valid username and password!
 #----------------------------------------------------
-username = 'pfhanchx'
-password = 'Platinum2017.4'
+username = "pfhanchx"
+password = "Wouldn't you like to know?"
 
 if False:
     # -- OTC values
