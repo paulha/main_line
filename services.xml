@@ -1,0 +1,227 @@
+<rdf:RDF
+        xmlns:calm="http://jazz.net/xmlns/prod/jazz/calm/1.0/"
+        xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+        xmlns:rm="http://www.ibm.com/xmlns/rdm/rdf/"
+        xmlns:oslc="http://open-services.net/ns/core#"
+        xmlns:jp10="http://jazz.net/xmlns/prod/jazz/process/1.0/"
+        xmlns:oslc_config="http://open-services.net/ns/config#"
+        xmlns:dcterms="http://purl.org/dc/terms/">
+    <oslc:ServiceProvider rdf:about="https://rtc.intel.com/dng0001001/oslc_rm/_SJTGkE3DEeaHLr158tq1Uw/services.xml">
+        <dcterms:publisher rdf:resource="https://rtc.intel.com/dng0001001/application-about"/>
+        <jp10:supportLinkDiscoveryViaOSLCQueries rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean"
+        >true
+        </jp10:supportLinkDiscoveryViaOSLCQueries>
+        <jp10:supportLinkDiscoveryViaLinkIndexProvider rdf:datatype=
+                                                               "http://www.w3.org/2001/XMLSchema#boolean">false
+        </jp10:supportLinkDiscoveryViaLinkIndexProvider>
+        <oslc:service>
+            <oslc:Service>
+                <oslc:creationFactory>
+                    <oslc:CreationFactory>
+                        <oslc:usage rdf:resource="http://open-services.net/ns/core#default"/>
+                        <oslc:resourceType rdf:resource="http://jazz.net/ns/rm/dng/config#DeliverySession"/>
+                        <oslc:creation rdf:resource="https://rtc.intel.com/dng0001001/delivery-sessions"/>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >Delivery Session Factory
+                        </dcterms:title>
+                    </oslc:CreationFactory>
+                </oslc:creationFactory>
+                <oslc:queryCapability>
+                    <oslc:QueryCapability>
+                        <oslc:resourceType rdf:resource="http://open-services.net/ns/rm#RequirementCollection"/>
+                        <oslc:resourceType rdf:resource="http://open-services.net/ns/rm#Requirement"/>
+                        <oslc:queryBase
+                                rdf:resource="https://rtc.intel.com/dng0001001/views?oslc.query=true&amp;projectURL=https%3A%2F%2Frtc.intel.com%2Fdng0001001%2Fprocess%2Fproject-areas%2F_SJTGkE3DEeaHLr158tq1Uw"/>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >Query Capability
+                        </dcterms:title>
+                    </oslc:QueryCapability>
+                </oslc:queryCapability>
+                <oslc:selectionDialog>
+                    <oslc:Dialog>
+                        <oslc:resourceType rdf:resource="http://open-services.net/ns/rm#RequirementCollection"/>
+                        <oslc:hintHeight>550px</oslc:hintHeight>
+                        <oslc:hintWidth>800px</oslc:hintWidth>
+                        <oslc:dialog
+                                rdf:resource="https://rtc.intel.com/dng0001001/pickers/com.ibm.rdm.web.CollectionPicker?projectURL=https%3A%2F%2Frtc.intel.com%2Fdng0001001%2Frm-projects%2F_SJTGkE3DEeaHLr158tq1Uw"/>
+                        <oslc:label>Collection</oslc:label>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >Collection Selection
+                        </dcterms:title>
+                    </oslc:Dialog>
+                </oslc:selectionDialog>
+                <calm:filter>
+                    <calm:Filter>
+                        <calm:filerBase
+                                rdf:resource="https://rtc.intel.com/dng0001001/calmFilter/_SJTGkE3DEeaHLr158tq1Uw/requirementsChangedSince"/>
+                        <oslc:resourceType rdf:resource="http://open-services.net/ns/rm#Requirement"/>
+                        <oslc:usage rdf:resource="http://jazz.net/xmlns/prod/jazz/calm/1.0/requirementsChangedSince"/>
+                        <dcterms:title>Requirements Changed Since Filter</dcterms:title>
+                    </calm:Filter>
+                </calm:filter>
+                <oslc:creationFactory>
+                    <oslc:CreationFactory>
+                        <oslc:usage rdf:resource="http://open-services.net/ns/core#default"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_UEx70U3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_UUP7MU3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_T4Im8U3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceType rdf:resource="http://open-services.net/ns/rm#Requirement"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_UYHukU3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_UMOAmU3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_UPyR8U3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_TlYqEU3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_UIy5IU3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_T7s4UU3DEeaHLr158tq1Uw"/>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >Requirement Creation Factory
+                        </dcterms:title>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_TzhMsU3DEeaHLr158tq1Uw"/>
+                        <oslc_config:component
+                                rdf:resource="https://rtc.intel.com/dng0001001/cm/component/_SSEoEE3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_UagUMU3DEeaHLr158tq1Uw"/>
+                        <oslc:creation
+                                rdf:resource="https://rtc.intel.com/dng0001001/requirementFactory?projectURL=https%3A%2F%2Frtc.intel.com%2Fdng0001001%2Fprocess%2Fproject-areas%2F_SJTGkE3DEeaHLr158tq1Uw"/>
+                    </oslc:CreationFactory>
+                </oslc:creationFactory>
+                <oslc:queryCapability>
+                    <oslc:QueryCapability>
+                        <oslc:queryBase
+                                rdf:resource="https://rtc.intel.com/dng0001001/folders?oslc.where=public_rm:parent=https%3A%2F%2Frtc.intel.com%2Fdng0001001%2Fprocess%2Fproject-areas%2F_SJTGkE3DEeaHLr158tq1Uw"/>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >Folder Query Capability
+                        </dcterms:title>
+                    </oslc:QueryCapability>
+                </oslc:queryCapability>
+                <oslc:creationDialog>
+                    <oslc:Dialog>
+                        <oslc:resourceType rdf:resource="http://open-services.net/ns/rm#Requirement"/>
+                        <oslc:hintHeight>530px</oslc:hintHeight>
+                        <oslc:hintWidth>520px</oslc:hintWidth>
+                        <oslc:dialog
+                                rdf:resource="https://rtc.intel.com/dng0001001/pickers/com.ibm.rdm.web.CreateArtifactPicker?projectURL=https%3A%2F%2Frtc.intel.com%2Fdng0001001%2Frm-projects%2F_SJTGkE3DEeaHLr158tq1Uw"/>
+                        <oslc:label>Requirement</oslc:label>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >Requirement Creation
+                        </dcterms:title>
+                    </oslc:Dialog>
+                </oslc:creationDialog>
+                <oslc:creationFactory>
+                    <oslc:CreationFactory>
+                        <oslc:usage rdf:resource="http://open-services.net/ns/core#default"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_UAw-gU3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_TvzKUU3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceShape
+                                rdf:resource="https://rtc.intel.com/dng0001001/types/_Tq5cMU3DEeaHLr158tq1Uw"/>
+                        <oslc_config:component
+                                rdf:resource="https://rtc.intel.com/dng0001001/cm/component/_SSEoEE3DEeaHLr158tq1Uw"/>
+                        <oslc:resourceType rdf:resource="http://open-services.net/ns/rm#RequirementCollection"/>
+                        <oslc:creation
+                                rdf:resource="https://rtc.intel.com/dng0001001/requirementFactory?projectURL=https%3A%2F%2Frtc.intel.com%2Fdng0001001%2Fprocess%2Fproject-areas%2F_SJTGkE3DEeaHLr158tq1Uw"/>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >Collection Creation Factory
+                        </dcterms:title>
+                    </oslc:CreationFactory>
+                </oslc:creationFactory>
+                <oslc:domain rdf:resource="http://open-services.net/ns/rm#"/>
+                <oslc:creationDialog>
+                    <oslc:Dialog>
+                        <oslc:resourceType rdf:resource="http://open-services.net/ns/rm#RequirementCollection"/>
+                        <oslc:hintHeight>530px</oslc:hintHeight>
+                        <oslc:hintWidth>520px</oslc:hintWidth>
+                        <oslc:dialog
+                                rdf:resource="https://rtc.intel.com/dng0001001/pickers/com.ibm.rdm.web.CreateCollectionPicker?projectURL=https%3A%2F%2Frtc.intel.com%2Fdng0001001%2Frm-projects%2F_SJTGkE3DEeaHLr158tq1Uw"/>
+                        <oslc:label>Collection</oslc:label>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >Collection Creation
+                        </dcterms:title>
+                    </oslc:Dialog>
+                </oslc:creationDialog>
+                <oslc:selectionDialog>
+                    <oslc:Dialog>
+                        <oslc:resourceType rdf:resource="http://open-services.net/ns/rm#Requirement"/>
+                        <oslc:hintHeight>550px</oslc:hintHeight>
+                        <oslc:hintWidth>800px</oslc:hintWidth>
+                        <oslc:dialog
+                                rdf:resource="https://rtc.intel.com/dng0001001/pickers/com.ibm.rdm.web.RRCPicker?projectURL=https%3A%2F%2Frtc.intel.com%2Fdng0001001%2Frm-projects%2F_SJTGkE3DEeaHLr158tq1Uw"/>
+                        <oslc:label>Requirement</oslc:label>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >Requirement Selection
+                        </dcterms:title>
+                    </oslc:Dialog>
+                </oslc:selectionDialog>
+            </oslc:Service>
+        </oslc:service>
+        <jp10:globalConfigurationAware rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+        >no
+        </jp10:globalConfigurationAware>
+        <jp10:supportOSLCSimpleQuery rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean"
+        >true
+        </jp10:supportOSLCSimpleQuery>
+        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+        >lpa_test_dng1 (Requirements)
+        </dcterms:title>
+        <dcterms:description rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+        >Service Descriptor for Project: lpa_test_dng1 (Requirements)
+        </dcterms:description>
+        <oslc:details rdf:resource="https://rtc.intel.com/dng0001001/process/project-areas/_SJTGkE3DEeaHLr158tq1Uw"/>
+        <oslc:service>
+            <oslc:Service>
+                <oslc:creationFactory>
+                    <oslc:CreationFactory>
+                        <oslc:usage rdf:resource="http://jazz.net/ns/rm/dng/batch#v1"/>
+                        <oslc:usage rdf:resource="http://open-services.net/ns/core#default"/>
+                        <oslc:creation
+                                rdf:resource="https://rtc.intel.com/dng0001001/batchFactory?projectURL=https%3A%2F%2Frtc.intel.com%2Fdng0001001%2Fprocess%2Fproject-areas%2F_SJTGkE3DEeaHLr158tq1Uw"/>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >Batch Creation Factory
+                        </dcterms:title>
+                    </oslc:CreationFactory>
+                </oslc:creationFactory>
+                <oslc:domain rdf:resource="http://jazz.net/ns/rm/dng/batch#"/>
+            </oslc:Service>
+        </oslc:service>
+        <oslc:service>
+            <oslc:Service>
+                <oslc:creationFactory>
+                    <oslc:CreationFactory>
+                        <oslc:resourceType rdf:resource="http://jazz.net/ns/rm/dng/reqif#ReqIFImport"/>
+                        <oslc:creation rdf:parseType="Resource">
+                        </oslc:creation>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >ReqIF Import Factory
+                        </dcterms:title>
+                    </oslc:CreationFactory>
+                </oslc:creationFactory>
+                <oslc:creationFactory>
+                    <oslc:CreationFactory>
+                        <oslc:resourceType rdf:resource="http://jazz.net/ns/rm/dng/reqif#ReqIFExport"/>
+                        <oslc:creation
+                                rdf:resource="https://rtc.intel.com/dng0001001/reqif_oslc/export?projectURL=https%3A%2F%2Frtc.intel.com%2Fdng0001001%2Fprocess%2Fproject-areas%2F_SJTGkE3DEeaHLr158tq1Uw"/>
+                        <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+                        >ReqIF Export Factory
+                        </dcterms:title>
+                    </oslc:CreationFactory>
+                </oslc:creationFactory>
+                <oslc:domain rdf:resource="http://jazz.net/ns/rm/dng/reqif#"/>
+            </oslc:Service>
+        </oslc:service>
+        <rm:home
+                rdf:resource="https://rtc.intel.com/dng0001001/web#action=com.ibm.rdm.web.pages.showFoundationProjectDashboard&amp;componentURI=https%3A%2F%2Frtc.intel.com%2Fdng0001001%2Frm-projects%2F_SJTGkE3DEeaHLr158tq1Uw%2Fcomponents%2F_SSEoEE3DEeaHLr158tq1Uw"/>
+        <jp10:supportContributionsToLinkIndexProvider rdf:datatype=
+                                                              "http://www.w3.org/2001/XMLSchema#boolean">false
+        </jp10:supportContributionsToLinkIndexProvider>
+    </oslc:ServiceProvider>
+</rdf:RDF>

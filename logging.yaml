@@ -1,0 +1,61 @@
+---
+version: 1
+disable_existing_loggers: True
+formatters:
+    simple:
+        # format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(filename)s::%(funcName)s::%(lineno)d"
+        format: "%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s"
+
+    file:
+        format: "%(message)s"
+
+handlers:
+    file:
+        class: logging.FileHandler
+        level: NOTSET
+        formatter: file
+        filename: otc_tool.dat
+        encoding: utf8
+
+    console:
+        class: logging.StreamHandler
+        level: NOTSET
+        formatter: simple
+        stream: ext://sys.stdout
+
+    info_file_handler:
+        class: logging.handlers.RotatingFileHandler
+        level: INFO
+        formatter: simple
+        filename: otc_tool.log
+        maxBytes: 10485760 # 10MB
+        backupCount: 20
+        encoding: utf8
+
+    error_file_handler:
+        class: logging.handlers.RotatingFileHandler
+        level: ERROR
+        formatter: simple
+        filename: otc_tool_errors.log
+        maxBytes: 10485760 # 10MB
+        backupCount: 20
+        encoding: utf8
+
+loggers:
+    file:
+        handlers:   [file]
+        propagate:  no
+
+    console:
+        level: DEBUG
+        handlers: [console]
+        propagate: no
+
+    error:
+        level: ERROR
+        handlers: [console, info_file_handler, error_file_handler]
+
+root:
+    level: INFO
+    handlers: [console, info_file_handler, error_file_handler]
+...
