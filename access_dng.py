@@ -48,6 +48,7 @@ class Jazz(requests.Session):
 
     def _add_from_xml(self, result: dict, element, tag: str=None, path: str=None, namespaces: dict=None, func=None):
         # todo: if the target already has an entry, convert to a list of entries. (Note, it might already be a list!)
+        # note: that this is going to return a list of elements if there's more than one there...
         e = element.xpath(path, namespaces=namespaces if namespaces is not None else self.namespace)
         if func is not None:
             e = func(e)
