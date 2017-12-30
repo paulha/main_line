@@ -1,4 +1,6 @@
 import requests
+from yaml import dump
+from json import dumps
 
 # -- Support
 import sys
@@ -14,123 +16,116 @@ log.setup_logging("logging.yaml", override={'handlers': {'info_file_handler': {'
 log.logger.setLevel(log.logging.getLevelName("INFO"))
 log.logger.disabled = False
 
-JAZZ_CONFIG_FILE = dirname(realpath(sys.argv[0])) + '/config.yaml' + pathsep + '~/.jazz/config.yaml'
+JAZZ_CONFIG_PATH = f"{dirname(realpath(sys.argv[0]))}/config.yaml{pathsep}~/.jazz/config.yaml"
 
-#----------------------------------------------------
-#       Fill in valid username and password!
-#----------------------------------------------------
-try:
-    jazz_config = get_server_info("dng", JAZZ_CONFIG_FILE)  # possible FileNotFoundError
-except FileNotFoundError as f:
-    self.log.fatal("Can't open JAZZ authentication configuration file: %s" % f)
-    raise FileNotFoundError("Can't find Jazz configuration file", JAZZ_CONFIG_FILE)
+olsc_namespaces = {
+    'dc': 'http://purl.org/dc/terms/',
+    'calm': "http://jazz.net/xmlns/prod/jazz/calm/1.0/",
+    # 'jfs_proc' : 'http://jazz.net/xmlns/prod/jazz/process/1.0/',
+    # 'oslc_disc': 'http://open-services.net/xmlns/discovery/1.0/',
+    'oslc_rm': "http://open-services.net/xmlns/rm/1.0/",
+    'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    'oslc': 'http://open-services.net/ns/core#',
+    'dcterms': "http://purl.org/dc/terms/",
+    'jp': "http://jazz.net/xmlns/prod/jazz/process/1.0/",
+}
 
-log.logger.info(f"Using JAMA server instance {jazz_config['host']}{jazz_config['instance']}")
+class Jazz(requests.Session):
+
+    def _get_xml(self, url, op_name=""):
+        response = self.get(url,
+                            headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
+                            stream=True, verify=False)
+        self.logger.debug(f"{op_name} response: {response.status_code}")
+        self.logger.debug(f"{op_name} cookies: {response.cookies}")
+        self.logger.debug(f"{url}\n{response.text}\n====")
+        if op_name:
+            with open(op_name + '.xml', 'w') as f:
+                f.write(response.text)
+
+        response.raw.decode_content = True
+        return etree.fromstring(response.text)
+
+    def _add_from_xml(self, result: dict, element, tag: str=None, path: str=None, namespaces: dict=None, func=None):
+        # todo: if the target already has an entry, convert to a list of entries. (Note, it might already be a list!)
+        e = element.xpath(path, namespaces=namespaces if namespaces is not None else self.namespace)
+        if func is not None:
+            e = func(e)
+        if e is not None:
+            result[tag] = e
+        pass
+
+    def __init__(self, server_alias=None, config_path=None, namespace=None, log=log):
+        requests.Session.__init__(self)
+        self.RootServices = {}
+        self.logger = log.logger
+        self.namespace = namespace
+
+        try:
+            jazz_config = get_server_info(server_alias, config_path)  # possible FileNotFoundError
+        except FileNotFoundError as f:
+            self.log.fatal("Can't open JAZZ authentication configuration file: %s" % f)
+            raise FileNotFoundError("Can't find Jazz configuration file", JAZZ_CONFIG_PATH)
+
+        self.logger.info(f"Using JAMA server instance {jazz_config['host']}{jazz_config['instance']}")
+
+        login_response = self.post(f"{jazz_config['host']}{jazz_config['instance']}/auth/j_security_check",
+                                   headers={"Content-Type": "application/x-www-form-urlencoded"},
+                                   data=f"j_username={jazz_config['username']}&j_password={jazz_config['password']}",
+                                   verify=False)
+        self.logger.info(f"Login response: {login_response.status_code}")
+        self.logger.info(f"Login cookies: {login_response.cookies}")
+        # print(f"{login_response.text}\n=========================")
+
+        pa_root_services = self._get_xml(f"{jazz_config['host']}{jazz_config['instance']}/rootservices", "Root Services")
+        root_services_catalogs = pa_root_services.xpath('//oslc_rm:rmServiceProviders/@rdf:resource',
+                                                        namespaces=olsc_namespaces)
+        self.RootServices['catalogs'] = []
+        for catalog_url in root_services_catalogs:
+            catalog = {'url': catalog_url, 'projects': {}}
+            self.RootServices['catalogs'].append(catalog)
+            self.logger.info("Catalog URL is: %s", self.RootServices)
+
+            # -- "ServiceProvider" are services related to a particular project...
+            project_xml_tree = self._get_xml(catalog['url'], "Project Catalog")
+            project_catalog = project_xml_tree.xpath('.//oslc:ServiceProvider', namespaces=self.namespace)
+            for project in project_catalog:
+
+                def get_text(x): return x[0].text if len(x)>0 else ""
+
+                def get_first(x): return x[0] if len(x)>0 else None
+
+                project_info = {'services': {}}
+                self._add_from_xml(project_info, project, 'title', './/dcterms:title', func=get_text)
+                self._add_from_xml(project_info, project, 'services_url', '//oslc:ServiceProvider/@rdf:about', func=get_first)
+                self._add_from_xml(project_info, project, 'registry', './/jp:consumerRegistry/@rdf:resource', func=get_first)
+                self._add_from_xml(project_info, project, 'details', './/oslc:details//@rdf:resource', func=get_first)
+                catalog['projects'][project_info['title']] = project_info
+
+                # -- List of services related to a particular project
+                pa_services = self._get_xml(project_info['services_url'], project_info['title'] + " Project Services")
+                # note: The problem here is that within a service section there are multiple (service) items...
+                services = pa_services.xpath('.//oslc:Service/*', namespaces=self.namespace)
+                for service in services:
+                    # Note: The info below seems a little stressed-- It's kind of random...
+                    service_info = {}
+                    self._add_from_xml(service_info, service, 'title', './/dcterms:title', func=get_text)
+                    self._add_from_xml(service_info, service, 'provider', '/oslc:ServiceProvider/@rdf:about', func=get_first)
+                    self._add_from_xml(service_info, service, 'registry', 'jp:consumerRegistry/@rdf:resource', func=get_first)
+                    self._add_from_xml(service_info, service, 'details', 'oslc:details//@rdf:resource', func=get_first)
+                    if not service_info['title']:
+                        # Actually, everything is empty... Maybe you should print it and see what it is...
+                        # Note: this seems to catch a domain entry at the same level as the names service, groupped
+                        # Note: under a service tag... Implies that there's something I don't understand. :-)
+                        self.logger.warning("Could not find name of service: %s", etree.tostring(service, pretty_print=True))
+                        continue
+                    if len(service_info)<3:
+                        # Most servcies have 3 or more entries...
+                        self.logger.warning("Only partially decoded service: %s", etree.tostring(service, pretty_print=True))
+
+                    project_info['services'][service_info['title']] = service_info
 
 
-"""
-if False:
-    # -- OTC values
-    authenticate = 'https://rtc.intel.com/rrc/auth/j_security_check'
-    get_root_services = 'https://rtc.intel.com/rrc/rootservices'
-    get_catalog = 'https://rtc.intel.com/rrc/oslc_rm/catalog'
-else:
-    # -- RongxunX's values
-    authenticate = 'https://rtc.intel.com/jts/j_security_check'
-    get_root_services = 'https://rtc.intel.com/dng0001001/rootservices'
-    get_catalog = 'https://rtc.intel.com/dng0001001/oslc_rm/catalog'
-    # _zQHY0a_4EeekDP1y4xXYPQ is the project ID of "SSG-OTC Product Management - DNG"
-    get_project_services = 'https://rtc.intel.com/dng0001001/oslc_rm/_zQHY0a_4EeekDP1y4xXYPQ/services.xml'
-"""
+j = Jazz(server_alias="dng", config_path=JAZZ_CONFIG_PATH, namespace=olsc_namespaces)
 
-with requests.Session() as sess:
-    # -- Using a session seems to work better than isolated gets and puts.
-    #    Pretty sure this is working becasue if I intentionally make the login name invalid
-    #    both the login_response and catalog_response indicate failure.
-    #
-    #    During the course of this login we get redirected to "https://rtc.intel.com/rrc/auth"
-    #    which results in an error message: 'Invalid path to authentication servlet.' None the
-    #    less, the login apparently succeeds.
-    #
-    login_response = sess.post(f"{jazz_config['host']}{jazz_config['instance']}/auth/j_security_check",
-                               headers={"Content-Type": "application/x-www-form-urlencoded"},
-                               data=f"j_username={jazz_config['username']}&j_password={jazz_config['password']}",
-                               verify=False)
-    print(f"Login response: {login_response.status_code}")
-    print(f"Login cookies: {login_response.cookies}")
-    # print(f"{login_response.text}\n=========================")
-
-    # -- This line works, even if login above fails...
-    root_services_response = sess.get(f"{jazz_config['host']}{jazz_config['instance']}/rootservices",
-                                      headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
-                                      stream=True, verify=False)
-    print(f"Root Services response: {root_services_response.status_code}")
-    print(f"Root Services cookies: {root_services_response.cookies}")
-    # Note: Printing this here, causes the parse below to fail (because the stream is already read...?)
-    # print(f"{root_services_response.text}\n=========================")
-
-    # -- This line only gives a result if the login succeeded, but the output is MUCH shorter than I expect.
-    olsc_namespaces = {
-        'dc': 'http://purl.org/dc/terms/',
-        # 'jfs_proc' : 'http://jazz.net/xmlns/prod/jazz/process/1.0/',
-        # 'oslc_disc': 'http://open-services.net/xmlns/discovery/1.0/',
-        'oslc_rm': "http://open-services.net/xmlns/rm/1.0/",
-        'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-        'oslc': 'http://open-services.net/ns/core#',
-        'dcterms': "http://purl.org/dc/terms/",
-        'jp': "http://jazz.net/xmlns/prod/jazz/process/1.0/"
-    }
-    root_services_response.raw.decode_content = True
-    pa_root_services = etree.parse(root_services_response.raw)
-    catalog_url = pa_root_services.xpath('//oslc_rm:rmServiceProviders/@rdf:resource', namespaces=olsc_namespaces)
-    log.logger.info(f"Catalog URL is {catalog_url}")
-
-    catalog_response = sess.get(catalog_url[0],
-                                headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
-                                stream=True, verify=False)
-    print(f"Catalog response: {catalog_response.status_code}")
-    print(f"Catalog cookies: {catalog_response.cookies}")
-
-    catalog_response.raw.decode_content = True
-    pa_project_services = etree.parse(catalog_response.raw)
-    log.logger.info(f"{etree.tostring(pa_project_services, pretty_print=True)}\n=========================")
-    projects = pa_project_services.xpath('//oslc:ServiceProvider', namespaces=olsc_namespaces)
-    log.logger.info(f"Projects is {projects}")
-
-    catalog_services = [
-        {
-            'services': project.xpath('//oslc:ServiceProvider/@rdf:about', namespaces=olsc_namespaces)[0],
-            'title': project.xpath('dcterms:title/text()', namespaces=olsc_namespaces)[0],
-            'registry': project.xpath('jp:consumerRegistry/@rdf:resource', namespaces=olsc_namespaces)[0],
-            'details': project.xpath('oslc:details//@rdf:resource', namespaces=olsc_namespaces)[0],
-        }
-        for project in projects
-    ]
-    log.logger.info(f"{catalog_services}")
-
-    # -- This line gets services of project "SSG-OTC Product Management - DNG"
-
-    project_services_response = sess.get(catalog_services[1]['services'],
-                                         headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
-                                         stream=True, verify=False)
-    print(f"Project Services response: {project_services_response.status_code}")
-    print(f"Project Services cookies: {project_services_response.cookies}")
-    # print(f"{project_services_response.text}\n=========================")
-
-    project_services_response.raw.decode_content = True
-    pa_services = etree.parse(project_services_response.raw)
-    log.logger.info(f"{etree.tostring(pa_services, pretty_print=True)}\n=========================")
-    services = pa_services.xpath('//oslc:service', namespaces=olsc_namespaces)
-    log.logger.info(f"Projects is {projects}")
-
-    services = [
-        {
-            #'services': project.xpath('//oslc:ServiceProvider/@rdf:about', namespaces=olsc_namespaces)[0],
-            'title': service.xpath('./oslc:Service//dcterms:title/text()', namespaces=olsc_namespaces),
-            #'registry': project.xpath('jp:consumerRegistry/@rdf:resource', namespaces=olsc_namespaces)[0],
-            #'details': project.xpath('oslc:details//@rdf:resource', namespaces=olsc_namespaces)[0],
-        }
-        for service in services
-    ]
-    log.logger.info(f"{services}")
-
+pass
