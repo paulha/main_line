@@ -15,7 +15,7 @@ urllib3.disable_warnings()
 
 # -- Set up logger...
 LOG_CONFIG_FILE = 'logging.yaml'+pathsep+dirname(realpath(sys.argv[0]))+'/logging.yaml'
-log.setup_logging("logging.yaml", override={'handlers': {'info_file_handler': {'filename': 'audit_jama_jira_matchup.log'}}})
+log.setup_logging("logging.yaml", override={'handlers': {'info_file_handler': {'filename': 'access_dng.log'}}})
 log.logger.setLevel(log.logging.getLevelName("INFO"))
 log.logger.disabled = False
 
@@ -29,7 +29,7 @@ class Jazz(requests.Session):
     def _get_first(x):
         return x[0] if len(x) > 0 else None
 
-    def _get_xml(self, url, op_name="", mode="w"):
+    def _get_xml(self, url, op_name="", mode="a"):
         response = self.get(url,
                             headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
                             stream=True, verify=False)
