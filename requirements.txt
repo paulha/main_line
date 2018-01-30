@@ -1,6 +1,7 @@
+pysocks
 lxml
 requests
-urllib
+# urllib
 urllib3
 git+https://bitbucket.org/paulha/otc_tools.git
 git+https://github.com/paulha/utility_funcs.git
