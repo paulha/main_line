@@ -142,10 +142,17 @@ if TEST_QUERY:
 
 if TEST_CREATE:
     class TestCreateFolder(Jazz_Test):
-        def test_create_folder(self):
+        def test_get_service_provider(self):
             self.assertEqual(self.jazz.get_service_provider(PROJECT),
                              "https://rtc-sbox.intel.com/rrc/oslc_rm/_xf5p4XNnEeecjP8b5e9Miw/services.xml",
                              "get service provider URL")
+
+        def test_get_root_folder(self):
+            self.assertEqual(self.jazz.discover_root_folder(),
+                             "xyzzy",
+                             "discover root folder")
+
+
 
 
 '''
