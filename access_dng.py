@@ -180,7 +180,7 @@ class Jazz(requests.Session):
 
         project_xml_tree = self._get_xml(self.RootServices['catalogs'][0]['url'], "Project Catalog")
         service_provider = project_xml_tree.xpath("//oslc:ServiceProvider[dcterms:title='" \
-                                                  + self.jazz_config.['project'] + "']/./@rdf:about",
+                                                  + self.jazz_config['project'] + "']/./@rdf:about",
                                                   namespaces=self.namespace)
         return service_provider[0]
 
@@ -237,23 +237,20 @@ class Jazz(requests.Session):
         self.logger.debug(this_item)
         return this_item
 
-    def discover_root_folder():
-        query = new HttpGet(self.get_service_provider());
-        query.addHeader("Accept", "application/rdf+xml");
-        query.addHeader("OSLC-Core-Version", "2.0");
+    def discover_root_folder(self):
+        xml_query = self._get_xml(self.get_service_provider(), op_name="discover root folder")
 
-        # -- Access to the Service Providers catalog
-        response = HttpUtils.sendGetForSecureDocument( server, query, login, password, httpclient, JTS_Server);
+        queryCapability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource"
+        query_node = xml_query.xpath(queryCapability, namespaces=self.namespace)
 
-        if (response.getStatusLine().getStatusCode() != 200):
-            response.getEntity().consumeContent();
-            throw new HttpResponseException(response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase());
+        folder_query = self._get_xml(query_node[0], op_name="discover root folder")
 
-        // Define the XPath evaluation environment
-        xpath = getXpathNamespace();
+        queryCapability = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
+        rootPath_node = folder_query.xpath(queryCapability, namespaces=self.namespace)
 
-        queryCapability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource";
+        return rootPath_node.text()
 
+        """
         # -- Parse the response body to retrieve the catalog URI
         InputSource source = new InputSource(response.getEntity().getContent());
         Node attribute = (Node) (xpath.evaluate(queryCapability, source, XPathConstants.NODE));
@@ -265,8 +262,7 @@ class Jazz(requests.Session):
         query.addHeader("OSLC-Core-Version", "2.0");
 
         # --Access to the Service Providers catalog
-        response = HttpUtils.sendGetForSecureDocument(
-        server, query, login, password, httpclient, JTS_Server);
+        response = HttpUtils.sendGetForSecureDocument(server, query, login, password, httpclient, JTS_Server);
 
         if (response.getStatusLine().getStatusCode() != 200):
             response.getEntity().consumeContent();
@@ -282,8 +278,9 @@ class Jazz(requests.Session):
         response.getEntity().consumeContent();
 
         return rootFolder;
+        """
 
-
+    """
     def createFolder(self, folderName: str, parentfolder: str=None, project: str=None) -> str:
         serviceProviderUrl = self.get_service_provider()
 
@@ -305,7 +302,7 @@ class Jazz(requests.Session):
         String targetProject = "?projectURL=" + this.server + "/process/project-areas/" + projectID;
         String folderCreationFactory = this.server + "/folders" + targetProject;
 
-        xml = f"""
+        xml = f'''
             <rdf:RDF
                     xmlns:nav="http://jazz.net/ns/rm/navigation#" 
                     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -320,7 +317,7 @@ class Jazz(requests.Session):
                     <nav:parent rdf:resource="{parentfolder}"/>
                 </rdf:Description>
             </rdf:RDF>
-        """;
+        ''';
 
         // Post to the Requirement Factory
         
@@ -335,7 +332,7 @@ class Jazz(requests.Session):
         Header folderLocation = sendPostForSecureDocument.getFirstHeader("Location");
         sendPostForSecureDocument.getEntity().consumeContent();
         return folderLocation.getValue();
-
+    """
 
 def main():
     j = Jazz(server_alias="sandbox", config_path=JAZZ_CONFIG_PATH)
