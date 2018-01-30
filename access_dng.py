@@ -10,6 +10,7 @@ import urllib3
 import utility_funcs.logger_yaml as log
 from lxml import etree
 from utility_funcs.search import get_server_info
+import re
 
 urllib3.disable_warnings()
 
@@ -21,6 +22,8 @@ log.logger.disabled = False
 
 JAZZ_CONFIG_PATH = f"{dirname(realpath(sys.argv[0]))}/config.yaml{pathsep}~/.jazz/config.yaml"
 
+XML_LOG_FILE = "Dialog"
+
 class Jazz(requests.Session):
 
     def _get_text(x):
@@ -29,7 +32,7 @@ class Jazz(requests.Session):
     def _get_first(x):
         return x[0] if len(x) > 0 else None
 
-    def _get_xml(self, url, op_name="", mode="a"):
+    def _get_xml(self, url, op_name=None, mode="a"):
         response = self.get(url,
                             headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
                             stream=True, verify=False)
@@ -43,12 +46,12 @@ class Jazz(requests.Session):
             # Everything else...
             logger = self.logger.debug
 
-        logger(f"{op_name} response: {response.status_code}")
-        logger(f"{op_name} cookies: {response.cookies}")
-        logger(f"{op_name} headers: {response.headers}")
+        logger(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
+        logger(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
+        logger(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
         logger(f"{url}\n{response.text}\n====")
 
-        if op_name:
+        if op_name is not None:
             if op_name not in self.reset_list:
                 local_mode = "w"
                 self.reset_list.append(op_name)
@@ -69,6 +72,42 @@ class Jazz(requests.Session):
         if 'ETag' in response.headers:
             root.attrib['ETag'] = response.headers['ETag']
         return root
+
+    def _post_xml(self, url, data=None, json=None, op_name="", mode="a"):
+        response = self.post(url, data=data, json=json,
+                            headers={'OSLC-Core-Version': '2.0',
+                                     'Accept': 'application/rdf+xml',
+                                     "Content-Type": "application/rdf+xml"},
+                            stream=True, verify=False)
+        if response.status_code >= 400 and response.status_code <= 499:
+            # Error 4XX:
+            logger = self.logger.error
+        elif response.status_code >= 300 and response.status_code <= 399:
+            # Warning 3XX:
+            logger = self.logger.warning
+        else:
+            # Everything else...
+            logger = self.logger.debug
+
+        logger(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
+        logger(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
+        logger(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
+        logger(f"{url}\n{response.text}\n====")
+
+        if op_name is not None:
+            if op_name not in self.reset_list:
+                local_mode = "w"
+                self.reset_list.append(op_name)
+            else:
+                local_mode = mode
+            with open(op_name + '.xml', local_mode) as f:
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} request:  POST {url} -->\n")
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} response: {response.status_code} -->\n")
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} cookies:  {response.cookies} -->\n")
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} headers:  {response.headers} -->\n")
+                f.write(response.text+"\n")
+
+        return response
 
     def _add_from_xml(self, result: dict, element, tag: str=None, path: str=None, namespaces: dict=None, func=None):
         # todo: if the target already has an entry, convert to a list of entries. (Note, it might already be a list!)
@@ -111,7 +150,7 @@ class Jazz(requests.Session):
         self.logger.debug(f"Login cookies: {login_response.cookies}")
         # print(f"{login_response.text}\n=========================")
 
-        pa_root_services = self._get_xml(f"{self.jazz_config['host']}{self.jazz_config['instance']}/rootservices", "Root Services")
+        pa_root_services = self._get_xml(f"{self.jazz_config['host']}{self.jazz_config['instance']}/rootservices", XML_LOG_FILE)
         root_services_catalogs = pa_root_services.xpath('//oslc_rm:rmServiceProviders/@rdf:resource',
                                                         namespaces=self.namespace)
         self.RootServices['catalogs'] = []
@@ -121,7 +160,7 @@ class Jazz(requests.Session):
             self.logger.debug("Catalog URL is: %s", self.RootServices)
 
             # -- "ServiceProvider" are services related to a particular project...
-            project_xml_tree = self._get_xml(catalog['url'], "Project Catalog")
+            project_xml_tree = self._get_xml(catalog['url'], XML_LOG_FILE)
             project_catalog = project_xml_tree.xpath('.//oslc:ServiceProvider', namespaces=self.namespace)
             for project in project_catalog:
 
@@ -140,7 +179,7 @@ class Jazz(requests.Session):
                 catalog['projects'][project_info['title']] = project_info
 
                 # -- List of services related to a particular project
-                pa_services = self._get_xml(project_info['ServiceProvider'], project_info['title'] + " Project Services")
+                pa_services = self._get_xml(project_info['ServiceProvider'], XML_LOG_FILE)
                 # note: The problem here is that within a service section there are multiple (service) items...
                 services = pa_services.xpath('.//oslc:Service/*', namespaces=self.namespace)
                 for service in services:
@@ -178,7 +217,7 @@ class Jazz(requests.Session):
 
     def get_service_provider(self):
 
-        project_xml_tree = self._get_xml(self.RootServices['catalogs'][0]['url'], "Project Catalog")
+        project_xml_tree = self._get_xml(self.RootServices['catalogs'][0]['url'], XML_LOG_FILE)
         service_provider = project_xml_tree.xpath("//oslc:ServiceProvider[dcterms:title='" \
                                                   + self.jazz_config['project'] + "']/./@rdf:about",
                                                   namespaces=self.namespace)
@@ -198,7 +237,7 @@ class Jazz(requests.Session):
         # where = f"&oslc.where={oslc_where}" if oslc_where is not None else ""
         where = "&"+urlencode({'oslc.where': oslc_where}) if oslc_where is not None else ""
         query_text = f"{query}{prefix}{select}{where}"
-        query_root = self._get_xml(query_text, "Query")
+        query_root = self._get_xml(query_text, XML_LOG_FILE)
         query_result = {'query_text': query_text, 'query_root': query_root, 'query_result': etree.tostring(query_root)}
         self._add_from_xml(query_result, query_root, 'result', './oslc:ResponseInfo/dcterms:title', func=Jazz._get_text)
         self._add_from_xml(query_result, query_root, 'about', './rdf:Description/@rdf:about', func=Jazz._get_first)
@@ -206,11 +245,11 @@ class Jazz(requests.Session):
         self._add_from_xml(query_result, query_root, 'Requirements', '//oslc_rm:Requirement/@rdf:about')
         return query_result
 
-    def _get_resources(self, resource_list, section_tag='resources'):
+    def _get_resources(self, resource_list, section_tag=XML_LOG_FILE):
         return [self._get_xml(resource_url, section_tag, mode="a+") for resource_url in resource_list]
 
 
-    def read(self, resource_url, section_tag='item'):
+    def read(self, resource_url, section_tag=XML_LOG_FILE):
         root_element = self._get_xml(resource_url, section_tag, mode="a+")
         this_item = {'Root': root_element, 'resource_url': resource_url}
         self._add_from_xml(this_item, root_element, 'about', './rdf:Description/@rdf:about')
@@ -238,69 +277,32 @@ class Jazz(requests.Session):
         return this_item
 
     def discover_root_folder(self):
-        xml_query = self._get_xml(self.get_service_provider(), op_name="discover root folder")
+        provider_query = self._get_xml(self.get_service_provider(), op_name=XML_LOG_FILE)
 
-        queryCapability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource"
-        query_node = xml_query.xpath(queryCapability, namespaces=self.namespace)
+        query_capability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource"
+        query_node = provider_query.xpath(query_capability, namespaces=self.namespace)
 
-        folder_query = self._get_xml(query_node[0], op_name="discover root folder")
+        folder_query = self._get_xml(query_node[0], op_name=XML_LOG_FILE)
 
-        queryCapability = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
-        rootPath_node = folder_query.xpath(queryCapability, namespaces=self.namespace)
+        query_capability = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
+        root_path_node = folder_query.xpath(query_capability, namespaces=self.namespace)
 
-        return rootPath_node.text()
+        return root_path_node[0]
 
-        """
-        # -- Parse the response body to retrieve the catalog URI
-        InputSource source = new InputSource(response.getEntity().getContent());
-        Node attribute = (Node) (xpath.evaluate(queryCapability, source, XPathConstants.NODE));
-        String queryCapabilityUrl = attribute.getTextContent();
-        response.getEntity().consumeContent();
-
-        query = new HttpGet(queryCapabilityUrl);
-        query.addHeader("Accept", "application/rdf+xml");
-        query.addHeader("OSLC-Core-Version", "2.0");
-
-        # --Access to the Service Providers catalog
-        response = HttpUtils.sendGetForSecureDocument(server, query, login, password, httpclient, JTS_Server);
-
-        if (response.getStatusLine().getStatusCode() != 200):
-            response.getEntity().consumeContent();
-            throw new HttpResponseException(response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase());
-
-        queryCapability = "//nav:folder[dcterms:title=\"root\"]/@rdf:about";
-
-        # --Parse the response body to retrieve the catalog URI
-        xpath = getXpathNamespace();
-        source = new InputSource(response.getEntity().getContent());
-        attribute = (Node) (xpath.evaluate(queryCapability, source, XPathConstants.NODE));
-        String rootFolder = attribute.getTextContent();
-        response.getEntity().consumeContent();
-
-        return rootFolder;
-        """
-
-    """
-    def createFolder(self, folderName: str, parentfolder: str=None, project: str=None) -> str:
-        serviceProviderUrl = self.get_service_provider()
+    def create_folder(self, folder_name: str=None, parent_folder: str=None) -> str:
+        service_provider_url = self.get_service_provider()
 
         # Get the Project ID String
-        projectID = serviceProviderUrl.substring(0, serviceProviderUrl.lastIndexOf("/"));
-        projectID = projectID.substring(projectID.lastIndexOf("/") + 1);
+        project_id= re.split('/',service_provider_url)[-2]
 
-        if (folderName == null):
-            folderName = "OSLC Created";
+        if folder_name is None:
+            folder_name = "OSLC Created";
 
-        if (parentfolder == null):
-            # -- lets create it on the root \
-            # -- parentfolder = this.server + "/folders/" + projectID;
-            # -- https: // jazz.net / jazz03 / web / projects / Requirements % 20 Management # action=com.ibm.team.workitem.viewWorkItem&id=114458
-            parentfolder = discoverRootFolder(serviceProviderUrl);
+        if parent_folder is None:
+            parent_folder = self.discover_root_folder()
 
-        # -- 6.0 update - changed to using rm server for targetProject URL, not the JTS server
-        # -- Create the URL Creation factory
-        String targetProject = "?projectURL=" + this.server + "/process/project-areas/" + projectID;
-        String folderCreationFactory = this.server + "/folders" + targetProject;
+        target_project = "?projectURL=" + self.jazz_config['host'] + self.jazz_config['instance'] + "/process/project-areas/" + project_id
+        folder_creation_factory = self.jazz_config['host'] + self.jazz_config['instance'] + "/folders" + target_project;
 
         xml = f'''
             <rdf:RDF
@@ -313,26 +315,21 @@ class Jazz(requests.Session):
                     xmlns:rm="http://jazz.net/ns/rm#">
                 <rdf:Description rdf:nodeID="A0">
                     <rdf:type rdf:resource="http://jazz.net/ns/rm/navigation#folder"/>
-                    <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string">{folderName}</dcterms:title>
-                    <nav:parent rdf:resource="{parentfolder}"/>
+                    <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string">{folder_name}</dcterms:title>
+                    <nav:parent rdf:resource="{parent_folder}"/>
                 </rdf:Description>
             </rdf:RDF>
-        ''';
+        '''
+        response = self._post_xml(folder_creation_factory, op_name=XML_LOG_FILE, data=xml)
+        return response.headers['location']
 
-        // Post to the Requirement Factory
-        
-        HttpPost post = new HttpPost(folderCreationFactory);
-        post.addHeader("Accept", "application/rdf+xml");
-        post.addHeader("Content-Type", "application/rdf+xml");
-        post.addHeader("OSLC-Core-Version", "2.0");
-        post.setEntity(new StringEntity(xml, HTTP.UTF_8));
-        // -- FIXME: Throws a 302 error 
-        HttpResponse sendPostForSecureDocument = HttpUtils.sendPostForSecureDocument(server, post, login, password, httpclient);
-        
-        Header folderLocation = sendPostForSecureDocument.getFirstHeader("Location");
-        sendPostForSecureDocument.getEntity().consumeContent();
-        return folderLocation.getValue();
-    """
+    def delete_folder(self, folder: str):
+        raise Exception("Not Yet Implemented")
+
+    def get_folder_name(self, folder: str) -> str:
+        folder_xml = self._get_xml(folder, op_name=XML_LOG_FILE)
+        node = folder_xml.xpath("//dcterms:title/text()", namespaces=self.namespace)
+        return node[0]
 
 def main():
     j = Jazz(server_alias="sandbox", config_path=JAZZ_CONFIG_PATH)

@@ -142,15 +142,33 @@ if TEST_QUERY:
 
 if TEST_CREATE:
     class TestCreateFolder(Jazz_Test):
-        def test_get_service_provider(self):
-            self.assertEqual(self.jazz.get_service_provider(PROJECT),
+        def test_01_get_service_provider(self):
+            self.assertEqual(self.jazz.get_service_provider(),
                              "https://rtc-sbox.intel.com/rrc/oslc_rm/_xf5p4XNnEeecjP8b5e9Miw/services.xml",
                              "get service provider URL")
 
-        def test_get_root_folder(self):
-            self.assertEqual(self.jazz.discover_root_folder(),
-                             "xyzzy",
+        def test_02_get_root_folder(self):
+            root = self.jazz.discover_root_folder()
+            root_name = self.jazz.get_folder_name(root)
+            self.assertEqual(root_name,
+                             "root",
                              "discover root folder")
+
+        def test_03_create_folder(self):
+            PARENT_DELETE_ME = "parent_delete_me"
+            parent = self.jazz.create_folder(PARENT_DELETE_ME)
+            self.assertEqual(self.jazz.get_folder_name(parent),
+                             PARENT_DELETE_ME,
+                             "create a folder")
+
+        def test_04_create_nested_folder(self):
+            PARENT_NESTED_FOLDER = "parent_nested_folder"
+            CHILD_FOLDER = "child_folder"
+            parent = self.jazz.create_folder(PARENT_NESTED_FOLDER)
+            child = self.jazz.create_folder(CHILD_FOLDER, parent_folder=parent)
+            self.assertEqual(self.jazz.get_folder_name(child),
+                             CHILD_FOLDER,
+                             "create a child folder")
 
 
 
