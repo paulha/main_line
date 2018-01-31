@@ -133,6 +133,10 @@ class Jazz(requests.Session):
         self.logger = log.logger
         self.namespace = namespace
         self.reset_list = []
+        self._service_provider = None
+        self._service_provider_root = None
+
+        self.logger.info("Start initialization")
 
         try:
             self.jazz_config = get_server_info(server_alias, config_path)  # possible FileNotFoundError
@@ -215,13 +219,91 @@ class Jazz(requests.Session):
 
                     project_info['services'][service_info['title']] = service_info
 
-    def get_service_provider(self):
+        self.logger.info("Initialization completed")
 
-        project_xml_tree = self._get_xml(self.RootServices['catalogs'][0]['url'], XML_LOG_FILE)
-        service_provider = project_xml_tree.xpath("//oslc:ServiceProvider[dcterms:title='" \
-                                                  + self.jazz_config['project'] + "']/./@rdf:about",
-                                                  namespaces=self.namespace)
-        return service_provider[0]
+    def get_service_provider(self):
+        if self._service_provider is None:
+            project_xml_tree = self._get_xml(self.RootServices['catalogs'][0]['url'], XML_LOG_FILE)
+            self._service_provider = project_xml_tree.xpath("//oslc:ServiceProvider[dcterms:title='" \
+                                                            + self.jazz_config['project'] + "']/./@rdf:about",
+                                                            namespaces=self.namespace)[0]
+
+        return self._service_provider
+
+    def get_service_provider_root(self):
+        if self._service_provider_root is None:
+            self._service_provider_root = self._get_xml(self._service_provider, op_name='service provider')
+
+        return self._service_provider_root
+
+    def discover_root_folder(self):
+        provider_query = self._get_xml(self.get_service_provider(), op_name=XML_LOG_FILE)
+
+        query_capability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource"
+        query_node = provider_query.xpath(query_capability, namespaces=self.namespace)
+
+        folder_query = self._get_xml(query_node[0], op_name=XML_LOG_FILE)
+
+        query_capability = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
+        root_path_node = folder_query.xpath(query_capability, namespaces=self.namespace)
+
+        return root_path_node[0]
+
+    def create_folder(self, folder_name: str=None, parent_folder: str=None) -> str:
+        service_provider_url = self.get_service_provider()
+
+        # Get the Project ID String
+        project_id= re.split('/',service_provider_url)[-2]
+
+        if folder_name is None:
+            folder_name = "OSLC Created";
+
+        if parent_folder is None:
+            parent_folder = self.discover_root_folder()
+
+        target_project = "?projectURL=" + self.jazz_config['host'] + self.jazz_config['instance'] + "/process/project-areas/" + project_id
+        folder_creation_factory = self.jazz_config['host'] + self.jazz_config['instance'] + "/folders" + target_project;
+
+        xml = f'''
+            <rdf:RDF
+                    xmlns:nav="http://jazz.net/ns/rm/navigation#" 
+                    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                    xmlns:oslc_rm="http://open-services.net/ns/rm#"
+                    xmlns:oslc="http://open-services.net/ns/core#"
+                    xmlns:rmTypes="http://www.ibm.com/xmlns/rdm/types/"
+                    xmlns:dcterms="http://purl.org/dc/terms/"
+                    xmlns:rm="http://jazz.net/ns/rm#">
+                <rdf:Description rdf:nodeID="A0">
+                    <rdf:type rdf:resource="http://jazz.net/ns/rm/navigation#folder"/>
+                    <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string">{folder_name}</dcterms:title>
+                    <nav:parent rdf:resource="{parent_folder}"/>
+                </rdf:Description>
+            </rdf:RDF>
+        '''
+        response = self._post_xml(folder_creation_factory, op_name=XML_LOG_FILE, data=xml)
+        return response.headers['location']
+
+    def delete_folder(self, folder: str):
+        raise Exception("Not Yet Implemented")
+
+    def create_requirement(self, parent_folder_URI: str=None):
+        factory_root = self.get_service_provider_root()
+        # (Why is this defined directly, like this?)
+        resource_type = "http://open-services.net/ns/rm#Requirement"
+        # requirement_factory_xpath = "//oslc:CreationFactory/oslc:resource_type[@rdf:resource=\"" + resource_type + "\"]/../oslc:creation/@rdf:resource"
+        requirement_factory_xpath = "//oslc:CreationFactory/oslc:resourceType[@rdf:resource=\"" + resource_type + "\"]/../oslc:creation/@rdf:resource"
+        factory_uri = factory_root.xpath(requirement_factory_xpath, namespaces=self.namespace)[0]
+        requirement_factory_shapes_xpath = "//oslc:CreationFactory/oslc:resourceType[@rdf:resource=\"" + resource_type + "\"]/../oslc:resourceShape/@rdf:resource"
+        requirement_factory_shapes_nodes = factory_root.xpath(requirement_factory_shapes_xpath, namespaces=self.namespace)
+        pass
+
+
+    def get_folder_name(self, folder: str) -> str:
+        folder_xml = self._get_xml(folder, op_name=XML_LOG_FILE)
+        node = folder_xml.xpath("//dcterms:title/text()", namespaces=self.namespace)
+        return node[0]
+
+    # -----------------------------------------------------------------------------------------------------------------
 
     def query(self, oslc_prefix=None, oslc_select=None, oslc_where=None):
         query_section = self.RootServices['catalogs'][0]['projects'][self.jazz_config['project']]['services']['Query Capability']
@@ -276,60 +358,6 @@ class Jazz(requests.Session):
         self.logger.debug(this_item)
         return this_item
 
-    def discover_root_folder(self):
-        provider_query = self._get_xml(self.get_service_provider(), op_name=XML_LOG_FILE)
-
-        query_capability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource"
-        query_node = provider_query.xpath(query_capability, namespaces=self.namespace)
-
-        folder_query = self._get_xml(query_node[0], op_name=XML_LOG_FILE)
-
-        query_capability = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
-        root_path_node = folder_query.xpath(query_capability, namespaces=self.namespace)
-
-        return root_path_node[0]
-
-    def create_folder(self, folder_name: str=None, parent_folder: str=None) -> str:
-        service_provider_url = self.get_service_provider()
-
-        # Get the Project ID String
-        project_id= re.split('/',service_provider_url)[-2]
-
-        if folder_name is None:
-            folder_name = "OSLC Created";
-
-        if parent_folder is None:
-            parent_folder = self.discover_root_folder()
-
-        target_project = "?projectURL=" + self.jazz_config['host'] + self.jazz_config['instance'] + "/process/project-areas/" + project_id
-        folder_creation_factory = self.jazz_config['host'] + self.jazz_config['instance'] + "/folders" + target_project;
-
-        xml = f'''
-            <rdf:RDF
-                    xmlns:nav="http://jazz.net/ns/rm/navigation#" 
-                    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-                    xmlns:oslc_rm="http://open-services.net/ns/rm#"
-                    xmlns:oslc="http://open-services.net/ns/core#"
-                    xmlns:rmTypes="http://www.ibm.com/xmlns/rdm/types/"
-                    xmlns:dcterms="http://purl.org/dc/terms/"
-                    xmlns:rm="http://jazz.net/ns/rm#">
-                <rdf:Description rdf:nodeID="A0">
-                    <rdf:type rdf:resource="http://jazz.net/ns/rm/navigation#folder"/>
-                    <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string">{folder_name}</dcterms:title>
-                    <nav:parent rdf:resource="{parent_folder}"/>
-                </rdf:Description>
-            </rdf:RDF>
-        '''
-        response = self._post_xml(folder_creation_factory, op_name=XML_LOG_FILE, data=xml)
-        return response.headers['location']
-
-    def delete_folder(self, folder: str):
-        raise Exception("Not Yet Implemented")
-
-    def get_folder_name(self, folder: str) -> str:
-        folder_xml = self._get_xml(folder, op_name=XML_LOG_FILE)
-        node = folder_xml.xpath("//dcterms:title/text()", namespaces=self.namespace)
-        return node[0]
 
 def main():
     j = Jazz(server_alias="sandbox", config_path=JAZZ_CONFIG_PATH)

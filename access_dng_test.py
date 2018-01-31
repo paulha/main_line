@@ -154,6 +154,7 @@ if TEST_CREATE:
                              "root",
                              "discover root folder")
 
+        """
         def test_03_create_folder(self):
             PARENT_DELETE_ME = "parent_delete_me"
             parent = self.jazz.create_folder(PARENT_DELETE_ME)
@@ -169,6 +170,10 @@ if TEST_CREATE:
             self.assertEqual(self.jazz.get_folder_name(child),
                              CHILD_FOLDER,
                              "create a child folder")
+        """
+        def test_05_create_resource(self):
+            resource = self.jazz.create_requirement()
+            return
 
 
 
