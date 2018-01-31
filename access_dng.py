@@ -26,6 +26,25 @@ XML_LOG_FILE = "Dialog"
 
 class Jazz(requests.Session):
 
+    def __init__(self, server_alias=None, config_path=None, namespace=None, log=log):
+        requests.Session.__init__(self)
+        self.logger = log.logger
+        self.namespace = namespace
+        self.reset_list = []
+        self.jazz_config = None
+        self._root_services = None
+        self._root_services_catalogs = None
+        self._service_provider = None
+        self._service_provider_root = None
+        self._query_base = None
+
+        self.logger.info("Start initialization")
+
+        login_response = self.login(server_alias, config_path)
+
+        root_services_catalogs = self.get_root_services_catalogs()
+        self.logger.info("Initialization completed")
+
     def _get_text(x):
         return x[0].text if len(x) > 0 else ""
 
@@ -127,18 +146,7 @@ class Jazz(requests.Session):
     def add_namespace(self, tag: str, definiton: str):
         self.namespace[tag] = definiton
 
-    def __init__(self, server_alias=None, config_path=None, namespace=None, log=log):
-        requests.Session.__init__(self)
-        self.RootServices = {}
-        self.logger = log.logger
-        self.namespace = namespace
-        self.reset_list = []
-        self._service_provider = None
-        self._service_provider_root = None
-        self._query_base = None
-
-        self.logger.info("Start initialization")
-
+    def login(self, server_alias: str=None, config_path: str=None) -> requests.Response:
         try:
             self.jazz_config = get_server_info(server_alias, config_path)  # possible FileNotFoundError
         except FileNotFoundError as f:
@@ -153,80 +161,27 @@ class Jazz(requests.Session):
                                    verify=False)
         self.logger.debug(f"Login response: {login_response.status_code}")
         self.logger.debug(f"Login cookies: {login_response.cookies}")
-        # print(f"{login_response.text}\n=========================")
+        return login_response
 
-        pa_root_services = self._get_xml(f"{self.jazz_config['host']}{self.jazz_config['instance']}/rootservices", XML_LOG_FILE)
-        root_services_catalogs = pa_root_services.xpath('//oslc_rm:rmServiceProviders/@rdf:resource',
-                                                        namespaces=self.namespace)
-        self.RootServices['catalogs'] = []
-        for catalog_url in root_services_catalogs:
-            catalog = {'url': catalog_url, 'projects': {}}
-            self.RootServices['catalogs'].append(catalog)
-            self.logger.debug("Catalog URL is: %s", self.RootServices)
+    def get_root_services(self):
+        if self._root_services is None:
+            self._root_services = self._get_xml(f"{self.jazz_config['host']}{self.jazz_config['instance']}/rootservices",
+                                                XML_LOG_FILE)
+        return self._root_services
 
-            # -- "ServiceProvider" are services related to a particular project...
-            project_xml_tree = self._get_xml(catalog['url'], XML_LOG_FILE)
-            project_catalog = project_xml_tree.xpath('.//oslc:ServiceProvider', namespaces=self.namespace)
-            for project in project_catalog:
+    def get_root_services_catalogs(self):
+        if self._root_services_catalogs is None:
+            self._root_services_catalogs = self.get_root_services().xpath('//oslc_rm:rmServiceProviders/@rdf:resource',
+                                                                          namespaces=self.namespace)
+        return self._root_services_catalogs
 
-                def get_text(x): return x[0].text if len(x)>0 else ""
-
-                def get_first(x): return x[0] if len(x)>0 else None
-
-                project_info = {'services': {}}
-                self._add_from_xml(project_info, project, 'ServiceProvider', '../oslc:ServiceProvider/@rdf:about', func=Jazz._get_first)
-                self._add_from_xml(project_info, project, 'ConsumerRegistry', './jp:consumerRegistry/@rdf:resource', func=Jazz._get_first)
-                self._add_from_xml(project_info, project, 'title', './dcterms:title', func=get_text)
-                self._add_from_xml(project_info, project, 'services_url', '//oslc:ServiceProvider/@rdf:about', func=Jazz._get_first)
-                self._add_from_xml(project_info, project, 'registry', './jp:consumerRegistry/@rdf:resource', func=Jazz._get_first)
-                self._add_from_xml(project_info, project, 'details', './oslc:details//@rdf:resource', func=Jazz._get_first)
-                self._add_from_xml(project_info, project, 'description', './dcterms:description', func=Jazz._get_text)
-                catalog['projects'][project_info['title']] = project_info
-
-                # -- List of services related to a particular project
-                pa_services = self._get_xml(project_info['ServiceProvider'], XML_LOG_FILE)
-                # note: The problem here is that within a service section there are multiple (service) items...
-                services = pa_services.xpath('.//oslc:Service/*', namespaces=self.namespace)
-                for service in services:
-                    service_info = {}
-                    self._add_from_xml(service_info, service, 'title', './*/dcterms:title', func=Jazz._get_text)
-                    self._add_from_xml(service_info, service, 'hintHeight', './*/oslc:hintHeight', func=Jazz._get_text)
-                    self._add_from_xml(service_info, service, 'hintWidth', './*/oslc:hintWidth', func=Jazz._get_text)
-                    self._add_from_xml(service_info, service, 'label', './*/oslc:label', func=Jazz._get_text)
-                    self._add_from_xml(service_info, service, 'provider', './*/oslc:ServiceProvider/@rdf:about', func=Jazz._get_first)
-                    self._add_from_xml(service_info, service, 'registry', './*/jp:consumerRegistry/@rdf:resource', func=Jazz._get_first)
-                    self._add_from_xml(service_info, service, 'details', './*/oslc:details/@rdf:resource', func=Jazz._get_first)
-                    self._add_from_xml(service_info, service, 'dialog', './*/oslc:dialog/@rdf:resource', func=Jazz._get_first)
-                    self._add_from_xml(service_info, service, 'usage', './*/oslc:usage/@rdf:resource', func=None)
-                    self._add_from_xml(service_info, service, 'resourceType', './*/oslc:resourceType/@rdf:resource', func=Jazz._get_first)
-                    self._add_from_xml(service_info, service, 'creation', './*/oslc:creation/@rdf:resource', func=Jazz._get_first)
-                    self._add_from_xml(service_info, service, 'queryBase', './*/oslc:queryBase/@rdf:resource', func=Jazz._get_first)
-                    # Note: the misspelling of filter as "filerBase" in the XPATH!
-                    self._add_from_xml(service_info, service, 'filterBase', './*/oslc:filerBase/@rdf:resource', func=Jazz._get_first)
-                    self._add_from_xml(service_info, service, 'filterBase', './*/oslc:filterBase/@rdf:resource', func=Jazz._get_first)
-                    # -- Always a list!
-                    self._add_from_xml(service_info, service, 'resourceShape', './*/oslc:resourceShape/@rdf:resource', func=None)
-                    self._add_from_xml(service_info, service, 'component', './*/oslc_config:component/@rdf:resource', func=Jazz._get_first)
-
-                    if 'title' not in service_info:
-                        # Actually, everything is empty... Maybe you should print it and see what it is...
-                        # Note: this seems to catch a domain entry at the same level as the names service, groupped
-                        # Note: under a service tag... Implies that there's something I don't understand. :-)
-                        self.logger.debug("Could not find name of service: %s", etree.tostring(service, pretty_print=True))
-                        continue
-                    if len(service_info)<3:
-                        # Most servcies have 3 or more entries...
-                        self.logger.debug("Only partially decoded service: %s", etree.tostring(service, pretty_print=True))
-
-                    project_info['services'][service_info['title']] = service_info
-
-        self.logger.info("Initialization completed")
-
-    def get_service_provider(self):
+    def get_service_provider(self, project: str=None) -> str:
+        project = project if project is not None else self.jazz_config['project']
         if self._service_provider is None:
-            project_xml_tree = self._get_xml(self.RootServices['catalogs'][0]['url'], XML_LOG_FILE)
-            self._service_provider = project_xml_tree.xpath("//oslc:ServiceProvider[dcterms:title='" \
-                                                            + self.jazz_config['project'] + "']/./@rdf:about",
+            catalog_url = self.get_root_services_catalogs()[0]
+            project_xml_tree = self._get_xml(catalog_url, XML_LOG_FILE)
+            self._service_provider = project_xml_tree.xpath("//oslc:ServiceProvider[dcterms:title='"
+                                                            + project + "']/./@rdf:about",
                                                             namespaces=self.namespace)[0]
 
         return self._service_provider
@@ -248,7 +203,8 @@ class Jazz(requests.Session):
         provider_query = self._get_xml(self.get_service_provider(), op_name=XML_LOG_FILE)
 
         query_capability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource"
-        query_node = provider_query.xpath(query_capability, namespaces=self.namespace)
+        # query_node = provider_query.xpath(query_capability, namespaces=self.namespace)
+        query_node = self.get_service_provider_root().xpath(query_capability, namespaces=self.namespace)
 
         folder_query = self._get_xml(query_node[0], op_name=XML_LOG_FILE)
 
@@ -261,7 +217,7 @@ class Jazz(requests.Session):
         service_provider_url = self.get_service_provider()
 
         # Get the Project ID String
-        project_id= re.split('/',service_provider_url)[-2]
+        project_id= re.split('/', service_provider_url)[-2]
 
         if folder_name is None:
             folder_name = "OSLC Created";
