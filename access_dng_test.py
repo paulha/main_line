@@ -2,6 +2,7 @@ import unittest
 
 import access_dng as ad
 import urllib3
+import utility_funcs.logger_yaml as log
 import lxml as etree
 
 # -- DNG/One Android/Programs/Test Integration

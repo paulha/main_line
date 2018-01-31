@@ -135,6 +135,7 @@ class Jazz(requests.Session):
         self.reset_list = []
         self._service_provider = None
         self._service_provider_root = None
+        self._query_base = None
 
         self.logger.info("Start initialization")
 
@@ -236,6 +237,13 @@ class Jazz(requests.Session):
 
         return self._service_provider_root
 
+    def get_query_base(self):
+        if self._query_base is None:
+            query_section = self.RootServices['catalogs'][0]['projects'][self.jazz_config['project']]['services']['Query Capability']
+            self._query_base = query_section['queryBase']
+
+        return self._query_base
+
     def discover_root_folder(self):
         provider_query = self._get_xml(self.get_service_provider(), op_name=XML_LOG_FILE)
 
@@ -306,20 +314,16 @@ class Jazz(requests.Session):
     # -----------------------------------------------------------------------------------------------------------------
 
     def query(self, oslc_prefix=None, oslc_select=None, oslc_where=None):
-        query_section = self.RootServices['catalogs'][0]['projects'][self.jazz_config['project']]['services']['Query Capability']
-        query = query_section['queryBase']
-        # -- Note: Something about 'calm' upsets things...
+        query = self.get_query_base()
         prefix = oslc_prefix if oslc_prefix is not None \
                     else ",".join([f'{key}=<{link}>' for key, link in self.namespace.items()])
 
-        # prefix = f"&oslc.prefix={prefix}" #   if oslc_prefix is not None else ""
         prefix = "&"+urlencode({'oslc.prefix': prefix})
-        # select = f"&oslc.select={oslc_select}" if oslc_select is not None else ""
         select = "&"+urlencode({'oslc.select': oslc_select}) if oslc_select is not None else ""
-        # where = f"&oslc.where={oslc_where}" if oslc_where is not None else ""
         where = "&"+urlencode({'oslc.where': oslc_where}) if oslc_where is not None else ""
         query_text = f"{query}{prefix}{select}{where}"
         query_root = self._get_xml(query_text, XML_LOG_FILE)
+        # -- Does it really make sense to do this:? Might make more sense to return the xml document 'query_root'...
         query_result = {'query_text': query_text, 'query_root': query_root, 'query_result': etree.tostring(query_root)}
         self._add_from_xml(query_result, query_root, 'result', './oslc:ResponseInfo/dcterms:title', func=Jazz._get_text)
         self._add_from_xml(query_result, query_root, 'about', './rdf:Description/@rdf:about', func=Jazz._get_first)
