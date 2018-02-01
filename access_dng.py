@@ -292,10 +292,10 @@ class Jazz(requests.Session):
         # in each shape there is one <oslc_config:component rdf:resource="https://rtc-sbox.intel.com/rrc/cm/component/_xv-GMHNnEeecjP8b5e9Miw"/>
         shapes = [self._get_xml(shape, op_name='shapes') for shape in requirement_factory_shapes_nodes]
         self.logger.info("Getting component urls...")
-        component_urls = [shape.xpath("//oslc_config:component/@rdf:resource", namespaces=self.get_xpath_string())
+        component_urls = [shape.xpath("//oslc_config:component/@rdf:resource", namespaces=self.get_xpath_namespace())
                           for shape in shapes]
         self.logger.info("Getting component info...")
-        components = [self._get_xml(component, op_name='shapes') for component in component_urls]
+        components = [self._get_xml(component[0], op_name='shapes') for component in component_urls]
         pass
 
 
