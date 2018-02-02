@@ -236,12 +236,12 @@ class Jazz(requests.Session):
 
         query_capability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource"
         # query_node = provider_query.xpath(query_capability, namespaces=self.namespace)
-        query_node = self.get_service_provider_root().xpath(query_capability, namespaces=self.namespace)
+        query_node = self.get_service_provider_root().xpath(query_capability, namespaces=self.get_xpath_namespace())
 
         folder_query = self._get_xml(query_node[0], op_name=XML_LOG_FILE)
 
         query_capability = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
-        root_path_node = folder_query.xpath(query_capability, namespaces=self.namespace)
+        root_path_node = folder_query.xpath(query_capability, namespaces=self.get_xpath_namespace())
 
         return root_path_node[0]
 
@@ -289,7 +289,7 @@ class Jazz(requests.Session):
         if resource_type not in self._requirement_factory:
             requirement_factory_xpath = f'//oslc:CreationFactory/oslc:resourceType[@rdf:resource="{resource_type}"]/../oslc:creation/@rdf:resource'
             self._requirement_factory[resource_type] = self.get_service_provider_root().xpath(requirement_factory_xpath,
-                                                                                              namespaces=self.namespace)[0]
+                                                                                              namespaces=self.get_xpath_namespace())[0]
         return self._requirement_factory[resource_type]
 
     def get_shapes_nodes(self, resource_type: str="http://open-services.net/ns/rm#Requirement"):
@@ -297,7 +297,7 @@ class Jazz(requests.Session):
         if resource_type not in self._shapes_nodes_root:
             requirement_factory_shapes_xpath = f'//oslc:CreationFactory/oslc:resourceType[@rdf:resource="{resource_type}"]/../oslc:resourceShape/@rdf:resource'
             requirement_factory_shapes = self.get_service_provider_root().xpath(requirement_factory_shapes_xpath,
-                                                                                            namespaces=self.namespace)
+                                                                                namespaces=self.get_xpath_namespace())
             self._shapes_nodes_root[resource_type] = {
                 resource_shape.xpath("//oslc:ResourceShape/dcterms:title/text()",
                                      namespaces=self.get_xpath_namespace())[0]: resource_shape
@@ -339,7 +339,7 @@ class Jazz(requests.Session):
 
     def get_folder_name(self, folder: str) -> str:
         folder_xml = self._get_xml(folder, op_name=XML_LOG_FILE)
-        node = folder_xml.xpath("//dcterms:title/text()", namespaces=self.namespace)
+        node = folder_xml.xpath("//dcterms:title/text()", namespaces=self.get_xpath_namespace())
         return node[0]
 
     # -----------------------------------------------------------------------------------------------------------------

@@ -52,7 +52,7 @@ if TEST_QUERY:
             )
             # todo: Check that the correct fields are returned
             self.assertIn('result', query_result, "Should have a result")
-            self.assertGreater(len(query_result['Requirements']), 10, "Should be many results")
+            self.assertGreater(len(query_result['Requirements']), 5, "Should be many results")
             self.assertIn('RequirementCollections', query_result, "Requirements collections should be returned")
             self.assertGreater(len(query_result['RequirementCollections']), 2, "Should be several collections")
 
@@ -64,7 +64,7 @@ if TEST_QUERY:
             )
             # todo: Check that the correct fields are returned
             self.assertIn('result', query_result, "Should have a result")
-            self.assertGreater(len(query_result['Requirements']), 10, "Should be many results")
+            self.assertGreater(len(query_result['Requirements']), 5, "Should be many results")
             self.assertIn('RequirementCollections', query_result, "Requirements collections should be returned")
             self.assertGreater(len(query_result['RequirementCollections']), 2, "Should be several collections")
 
@@ -76,7 +76,7 @@ if TEST_QUERY:
             )
             # todo: Check that the correct fields are returned
             self.assertIn('result', query_result, "Should have a result")
-            self.assertGreater(len(query_result['Requirements']), 10, "Should be many results")
+            self.assertGreater(len(query_result['Requirements']), 5, "Should be many results")
             self.assertIn('RequirementCollections', query_result, "Requirements collections should be returned")
             self.assertGreater(len(query_result['RequirementCollections']), 2, "Should be several collections")
 
@@ -89,7 +89,7 @@ if TEST_QUERY:
             )
             # todo: Check that the correct fields are returned
             self.assertIn('result', query_result, "Should have a result")
-            self.assertGreater(len(query_result['Requirements']), 10, "Should be many results")
+            self.assertGreater(len(query_result['Requirements']), 5, "Should be many results")
             self.assertIn('RequirementCollections', query_result, "Requirements collections should be returned")
             self.assertGreater(len(query_result['RequirementCollections']), 2, "Should be several collections")
 
