@@ -29,7 +29,7 @@ sample = """
 """
 
 
-class MyTestCase(unittest.TestCase):
+class Requirement_TestCases(unittest.TestCase):
     def test_01_requirement_get(self):
         r = RequirementRequest(property_uri='property', instanceShape='shape', parent='parent',
                                description="This is some description")
