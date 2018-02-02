@@ -25,7 +25,7 @@ JAZZ_CONFIG_PATH = f"{dirname(realpath(sys.argv[0]))}/config.yaml{pathsep}~/.jaz
 
 XML_LOG_FILE = "Dialog"
 
-class Jazz(requests.Session):
+class Jazz:
     def get_xpath_namespace(self):
         return {
             "acc": "http://open-services.net/ns/core/acc#",
@@ -48,7 +48,7 @@ class Jazz(requests.Session):
 
     
     def __init__(self, server_alias=None, config_path=None, namespace=None, log=log):
-        requests.Session.__init__(self)
+        self.jazz_session = requests.Session()
         self.logger = log.logger
         self.namespace = namespace
         self.reset_list = []
@@ -76,9 +76,9 @@ class Jazz(requests.Session):
 
     def _get_xml(self, url, op_name=None, mode="a"):
         self.logger.info(f"_get_xml('{url}', {op_name})")
-        response = self.get(url,
-                            headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
-                            stream=True, verify=False)
+        response = self.jazz_session.get(url,
+                                         headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
+                                         stream=True, verify=False)
         if response.status_code >= 400 and response.status_code <= 499:
             # Error 4XX:
             logger = self.logger.error
@@ -118,11 +118,11 @@ class Jazz(requests.Session):
 
     def _post_xml(self, url, data=None, json=None, op_name="", mode="a"):
         self.logger.info(f"_post_xml('{url}', {op_name})")
-        response = self.post(url, data=data, json=json,
-                            headers={'OSLC-Core-Version': '2.0',
-                                     'Accept': 'application/rdf+xml',
-                                     "Content-Type": "application/rdf+xml"},
-                            stream=True, verify=False)
+        response = self.jazz_session.post(url, data=data, json=json,
+                                          headers={'OSLC-Core-Version': '2.0',
+                                                   'Accept': 'application/rdf+xml',
+                                                   "Content-Type": "application/rdf+xml"},
+                                          stream=True, verify=False)
         if response.status_code >= 400 and response.status_code <= 499:
             # Error 4XX:
             logger = self.logger.error
@@ -180,10 +180,10 @@ class Jazz(requests.Session):
 
         self.logger.info(f"Using JAMA server instance {self.jazz_config['host']}{self.jazz_config['instance']}")
 
-        login_response = self.post(f"{self.jazz_config['host']}{self.jazz_config['instance']}/auth/j_security_check",
-                                   headers={"Content-Type": "application/x-www-form-urlencoded"},
-                                   data=f"j_username={self.jazz_config['username']}&j_password={self.jazz_config['password']}",
-                                   verify=False)
+        login_response = self.jazz_session.post(f"{self.jazz_config['host']}{self.jazz_config['instance']}/auth/j_security_check",
+                                                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                                                data=f"j_username={self.jazz_config['username']}&j_password={self.jazz_config['password']}",
+                                                verify=False)
         self.logger.debug(f"Login response: {login_response.status_code}")
         self.logger.debug(f"Login cookies: {login_response.cookies}")
         return login_response
