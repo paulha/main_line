@@ -2,13 +2,14 @@
 import sys
 from os.path import pathsep, dirname, realpath
 
-import lxml as etree
+#import lxml as etree
+from lxml import etree
 import pandas as pd
 import requests
 from urllib.parse import urlencode
 import urllib3
 import utility_funcs.logger_yaml as log
-from lxml import etree
+
 from utility_funcs.search import get_server_info
 import re
 
@@ -57,6 +58,8 @@ class Jazz(requests.Session):
         self._service_provider = None
         self._service_provider_root = None
         self._query_base = None
+        self._requirement_factory = {}
+        self._shapes_nodes_root = {}
 
         self.logger.info("Start initialization")
 
@@ -278,25 +281,56 @@ class Jazz(requests.Session):
     def delete_folder(self, folder: str):
         raise Exception("Not Yet Implemented")
 
-    def create_requirement(self, parent_folder_URI: str=None):
+    def get_requirement_factory(self, resource_type: str="http://open-services.net/ns/rm#Requirement") -> str:
+        self.logger.info(f"get_create_factory()")
+        if resource_type not in self._requirement_factory:
+            requirement_factory_xpath = f'//oslc:CreationFactory/oslc:resourceType[@rdf:resource="{resource_type}"]/../oslc:creation/@rdf:resource'
+            self._requirement_factory[resource_type] = self.get_service_provider_root().xpath(requirement_factory_xpath,
+                                                                                              namespaces=self.namespace)[0]
+        return self._requirement_factory[resource_type]
+
+    def get_shapes_nodes(self, resource_type: str="http://open-services.net/ns/rm#Requirement"):
+        self.logger.info("Getting shapes info...")
+        if resource_type not in self._shapes_nodes_root:
+            requirement_factory_shapes_xpath = f'//oslc:CreationFactory/oslc:resourceType[@rdf:resource="{resource_type}"]/../oslc:resourceShape/@rdf:resource'
+            requirement_factory_shapes = self.get_service_provider_root().xpath(requirement_factory_shapes_xpath,
+                                                                                            namespaces=self.namespace)
+            self._shapes_nodes_root[resource_type] = {
+                resource_shape.xpath("//oslc:ResourceShape/dcterms:title/text()",
+                                     namespaces=self.get_xpath_namespace())[0]: resource_shape
+                for resource_shape in
+                [self._get_xml(shape, op_name='shapes') for shape in requirement_factory_shapes]
+            }
+
+        return self._shapes_nodes_root[resource_type]
+
+    def get_shape_node_root(self, shape_type: str="", resource_type: str="http://open-services.net/ns/rm#Requirement"):
+        shape_nodes = self.get_shapes_nodes(resource_type)
+        if shape_type in shape_nodes:
+            shape_node = shape_nodes[shape_type]
+        else:
+            raise Exception(f"Did not find {shape_type} in defined shape nodes for {resource_type}")
+
+        return shape_node
+
+    def get_shape_url(self, shape_type: str="", resource_type: str="http://open-services.net/ns/rm#Requirement"):
+        shape_nodes = self.get_shapes_nodes(resource_type)
+        if shape_type in shape_nodes:
+            shape_uri = shape_nodes[shape_type].xpath("//oslc:ResourceShape/@rdf:about", namespaces=self.get_xpath_namespace())[0]
+        else:
+            raise Exception(f"Did not find {shape_type} in defined shapes for {resource_type}")
+
+        return shape_uri
+
+    def create_requirement(self, parent_folder_URI: str=None, resource_type: str="http://open-services.net/ns/rm#Requirement"):
         self.logger.info(f"create_requirement('{parent_folder_URI}')")
         factory_root = self.get_service_provider_root()
-        # (Why is this defined directly, like this?)
-        resource_type = "http://open-services.net/ns/rm#Requirement"
-        # requirement_factory_xpath = "//oslc:CreationFactory/oslc:resource_type[@rdf:resource=\"" + resource_type + "\"]/../oslc:creation/@rdf:resource"
-        requirement_factory_xpath = "//oslc:CreationFactory/oslc:resourceType[@rdf:resource=\"" + resource_type + "\"]/../oslc:creation/@rdf:resource"
-        factory_uri = factory_root.xpath(requirement_factory_xpath, namespaces=self.namespace)[0]
-        requirement_factory_shapes_xpath = "//oslc:CreationFactory/oslc:resourceType[@rdf:resource=\"" + resource_type + "\"]/../oslc:resourceShape/@rdf:resource"
-        requirement_factory_shapes_nodes = factory_root.xpath(requirement_factory_shapes_xpath, namespaces=self.namespace)
-        self.logger.info("Getting shapes...")
-        # in each shape there is one <oslc_config:component rdf:resource="https://rtc-sbox.intel.com/rrc/cm/component/_xv-GMHNnEeecjP8b5e9Miw"/>
-        shapes = [self._get_xml(shape, op_name='shapes') for shape in requirement_factory_shapes_nodes]
-        self.logger.info("Getting component urls...")
-        # -- Turns out this is fixed with a reference to the (current) project in the Title...
-        component_urls = [shape.xpath("//oslc_config:component/@rdf:resource", namespaces=self.get_xpath_namespace())
-                          for shape in shapes]
-        self.logger.info("Getting component info...")
-        components = [self._get_xml(component[0], op_name='shapes') for component in component_urls]
+        resource_shapes_roots = self.get_shapes_nodes(resource_type=resource_type)
+        uri = self.get_shape_url(shape_type='Default Requirement')
+        requirement_root = self._get_xml(uri, "create requirement")
+        shape_text = etree.tostring(self.get_shape_node_root(shape_type='Default Requirement', resource_type=resource_type))
+        names = [value for value in self.get_shape_node_root(shape_type='Default Requirement', resource_type=resource_type)
+                  .xpath('//oslc:name/text()', namespaces=self.get_xpath_namespace())]
         pass
 
 
