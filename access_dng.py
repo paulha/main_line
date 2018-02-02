@@ -223,13 +223,16 @@ class Jazz(requests.Session):
 
     def get_query_base(self):
         if self._query_base is None:
-            query_section = self.RootServices['catalogs'][0]['projects'][self.jazz_config['project']]['services']['Query Capability']
-            self._query_base = query_section['queryBase']
+            # query_section = self.RootServices['catalogs'][0]['projects'][self.jazz_config['project']]['services']['Query Capability']
+            # self._query_base = query_section['queryBase']
+            # query_capability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource"
+            query_capability = "//oslc:QueryCapability[dcterms:title=\"Query Capability\"]/oslc:queryBase/@rdf:resource"
+            self._query_base = self.get_service_provider_root().xpath(query_capability, namespaces=self.namespace)[0]
 
         return self._query_base
 
     def discover_root_folder(self):
-        provider_query = self._get_xml(self.get_service_provider(), op_name=XML_LOG_FILE)
+        # provider_query = self._get_xml(self.get_service_provider(), op_name=XML_LOG_FILE)
 
         query_capability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource"
         # query_node = provider_query.xpath(query_capability, namespaces=self.namespace)
@@ -326,10 +329,10 @@ class Jazz(requests.Session):
         self.logger.info(f"create_requirement('{parent_folder_URI}')")
         factory_root = self.get_service_provider_root()
         resource_shapes_roots = self.get_shapes_nodes(resource_type=resource_type)
-        uri = self.get_shape_url(shape_type='Default Requirement')
+        uri = self.get_shape_url(shape_type=self.jazz_config['requirement_shape'])
         requirement_root = self._get_xml(uri, "create requirement")
-        shape_text = etree.tostring(self.get_shape_node_root(shape_type='Default Requirement', resource_type=resource_type))
-        names = [value for value in self.get_shape_node_root(shape_type='Default Requirement', resource_type=resource_type)
+        shape_text = etree.tostring(self.get_shape_node_root(shape_type=self.jazz_config['requirement_shape'], resource_type=resource_type))
+        names = [value for value in self.get_shape_node_root(shape_type=self.jazz_config['requirement_shape'], resource_type=resource_type)
                   .xpath('//oslc:name/text()', namespaces=self.get_xpath_namespace())]
         pass
 

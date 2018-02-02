@@ -5,9 +5,15 @@ import urllib3
 import utility_funcs.logger_yaml as log
 import lxml as etree
 
+# -- Login
+urllib3.disable_warnings()
+jazz = ad.Jazz(server_alias="sandbox", config_path=ad.JAZZ_CONFIG_PATH)
+
 # -- DNG/One Android/Programs/Test Integration
-TEST_RECORD_1 = 67383               # 50161
-TEST_RECORD_2 = 67382               # 50162
+# TEST_RECORD_1 = 67383               # 50161
+# TEST_RECORD_2 = 67382               # 50162
+TEST_RECORD_1 = jazz.jazz_config['TEST_RECORD_1']
+TEST_RECORD_2 = jazz.jazz_config['TEST_RECORD_2']
 SELECT_ALL = '*'
 SELECT_ONE = "dcterms:identifier"
 SELECT_TWO = "dcterms:title,dcterms:description"
@@ -17,12 +23,9 @@ WHERE_TWO = f"dcterms:identifier in [{TEST_RECORD_1},{TEST_RECORD_2}]"
 
 PROJECT = 'Open Requirements Sandbox'
 
-# -- Login
-urllib3.disable_warnings()
-jazz = ad.Jazz(server_alias="sandbox", config_path=ad.JAZZ_CONFIG_PATH)
 
 TEST_CREATE = True
-TEST_QUERY = False
+TEST_QUERY = True
 
 
 class Jazz_Test(unittest.TestCase):
@@ -144,7 +147,7 @@ if TEST_QUERY:
 
 if TEST_CREATE:
     class TestCreateFolder(Jazz_Test):
-        if False:
+        if True:
             def test_01_get_service_provider(self):
                 self.assertEqual(self.jazz.get_service_provider(),
                                  "https://rtc-sbox.intel.com/rrc/oslc_rm/_xf5p4XNnEeecjP8b5e9Miw/services.xml",
@@ -205,4 +208,4 @@ if __name__ == '__main__':
     unittest.main()
     jazz.close()
     log.logger.info("Done")
-    exit(0)
+
