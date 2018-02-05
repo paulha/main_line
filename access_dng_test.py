@@ -160,7 +160,7 @@ if TEST_CREATE:
                                  "root",
                                  "discover root folder")
 
-
+        if False:
             def test_03_create_folder(self):
                 PARENT_DELETE_ME = "parent_delete_me"
                 parent = self.jazz.create_folder(PARENT_DELETE_ME)
