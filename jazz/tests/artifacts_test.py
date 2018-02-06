@@ -1,6 +1,7 @@
 import unittest
 from lxml import etree
-from jazz.requirement import RequirementRequest
+from .dng_test import JazzTest
+from jazz.artifacts import RequirementRequest, Folder
 
 sample = """
 <rdf:RDF
@@ -29,7 +30,7 @@ sample = """
 """
 
 
-class Requirement_TestCases(unittest.TestCase):
+class RequirementTestCases(JazzTest):
     def test_01_requirement_get(self):
         r = RequirementRequest(property_uri='property', instanceShape='shape', parent='parent',
                                description="This is some description")
@@ -53,6 +54,50 @@ class Requirement_TestCases(unittest.TestCase):
         root = etree.fromstring(sample)
         r = RequirementRequest(property_uri='property', instanceShape='shape', parent='parent')
         r.initialize_from_xml(root)
+
+class FolderTestcases(JazzTest):
+    def test_01_read_folder(self):
+        root_folder_uri = self.jazz.discover_root_folder()
+        root_folder = Folder(self.jazz)
+        result = root_folder.read(root_folder_uri)
+        self.assertEqual(root_folder, result, "Call to read() did not return self")
+        pass
+
+class FindFolderTestCases(JazzTest):
+    def test_01_find_empty_path(self):
+        fs_finder = Folder(self.jazz)
+        found = fs_finder.get_matching_folder_uri("")
+        self.assertEqual([], found, "Empty path should return None")
+
+    def test_10_find_top_dir_path(self):
+        fs_finder = Folder(self.jazz)
+        found = fs_finder.get_matching_folder_uri("pfh -- NewFolder")
+        self.assertGreater(len(found), 0, "one or more found paths")
+        folders = [self.jazz._get_xml(uri, op_name='read folders') for uri in found]
+        pass
+
+    def test_20_find_top_dir_path(self):
+        fs_finder = Folder(self.jazz)
+        found = fs_finder.get_matching_folder_uri("pfh -- NewFolder/subfolder to pff")
+        self.assertGreater(len(found), 0, "one or more found paths")
+        folders = self.jazz._get_xml(found[0], op_name='read folders')
+        about = folders.xpath(".//nav:folder/@rdf:about", namespaces=fs_finder.xpath_namespaces())[0]
+        resources = self.jazz._get_xml(about, op_name='read folders')
+        provdr = folders.xpath(".//oslc:serviceProvider/@rdf:resource", namespaces=fs_finder.xpath_namespaces())[0]
+        provider = self.jazz._get_xml(provdr, op_name='read folders')
+        folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
+        folder_query = provider.xpath(folder_query_xpath,
+                                      namespaces=fs_finder.xpath_namespaces())
+        x = self.jazz._get_xml(folder_query[0], op_name='read folders')
+
+        """
+        To find the resources in a folder, find the ID of the folder and then find all the resources
+        that have that ID as a parent.
+        """
+
+        pass
+
+
 
 
 if __name__ == '__main__':
