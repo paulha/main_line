@@ -234,16 +234,15 @@ class Jazz:
     def discover_root_folder(self):
         # provider_query = self._get_xml(self.get_service_provider(), op_name=XML_LOG_FILE)
 
-        query_capability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource"
-        # query_node = provider_query.xpath(query_capability, namespaces=self.namespace)
-        query_node = self.get_service_provider_root().xpath(query_capability, namespaces=self.get_xpath_namespace())
+        folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
+        folder_query_uri = self.get_service_provider_root().xpath(folder_query_xpath, namespaces=self.get_xpath_namespace())[0]
 
-        folder_query = self._get_xml(query_node[0], op_name=XML_LOG_FILE)
+        folder_result_xml = self._get_xml(folder_query_uri, op_name=XML_LOG_FILE)
 
-        query_capability = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
-        root_path_node = folder_query.xpath(query_capability, namespaces=self.get_xpath_namespace())
+        root_folder_xpath = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
+        root_path_uri = folder_result_xml.xpath(root_folder_xpath, namespaces=self.get_xpath_namespace())[0]
 
-        return root_path_node[0]
+        return root_path_uri
 
     def create_folder(self, folder_name: str=None, parent_folder: str=None) -> str:
         self.logger.info(f"create_folder('{folder_name}')")

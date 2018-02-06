@@ -1,9 +1,8 @@
 import unittest
 
-import access_dng as ad
+from jazz import dng as ad
 import urllib3
 import utility_funcs.logger_yaml as log
-import lxml as etree
 
 # -- Login
 urllib3.disable_warnings()
@@ -30,7 +29,7 @@ TEST_CREATE = False
 TEST_QUERY = True
 
 
-class Jazz_Test(unittest.TestCase):
+class JazzTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         urllib3.disable_warnings()
@@ -45,7 +44,7 @@ class Jazz_Test(unittest.TestCase):
 
 
 if TEST_QUERY:
-    class TestQueryPrefix(Jazz_Test):
+    class TestQueryPrefix(JazzTest):
         def test_query_prefix_00(self):
             """Test with a single prefix"""
             query_result = self.jazz.query(
@@ -96,7 +95,7 @@ if TEST_QUERY:
             self.assertGreater(len(query_result['RequirementCollections']), 2, "Should be several collections")
 
 
-    class TestQuerySelect(Jazz_Test):
+    class TestQuerySelect(JazzTest):
         def test_query_select_00(self):
             """Locate dcterms:identifier=67120, no selected fields (should return all)"""
             query_result = self.jazz.query(
@@ -131,7 +130,7 @@ if TEST_QUERY:
             self.assertNotIn('RequirementCollections', query_result, "No requirements collections should be returned")
 
 
-    class TestQueryWhere(Jazz_Test):
+    class TestQueryWhere(JazzTest):
         def test_query_where_03(self):
             """Locate dcterms:identifier in [{TEST_RECORD_1},{TEST_RECORD_2}], select all fields ('*')"""
             query_result = self.jazz.query(
@@ -165,26 +164,26 @@ if TEST_QUERY:
 
 
 if TEST_CREATE:
-    class TestCreateFolder(Jazz_Test):
+    class TestCreateFolder(JazzTest):
         if True:
             def test_01_get_service_provider(self):
-                self.assertEqual(self.jazz.get_service_provider(),
-                                 "https://rtc-sbox.intel.com/rrc/oslc_rm/_xf5p4XNnEeecjP8b5e9Miw/services.xml",
+                self.assertEqual("https://rtc-sbox.intel.com/rrc/oslc_rm/_xf5p4XNnEeecjP8b5e9Miw/services.xml",
+                                 self.jazz.get_service_provider(),
                                  "get service provider URL")
 
             def test_02_get_root_folder(self):
                 root = self.jazz.discover_root_folder()
                 root_name = self.jazz.get_folder_name(root)
-                self.assertEqual(root_name,
-                                 "root",
+                self.assertEqual("root",
+                                 root_name,
                                  "discover root folder")
 
-
+        if False:
             def test_03_create_folder(self):
                 PARENT_DELETE_ME = "parent_delete_me"
                 parent = self.jazz.create_folder(PARENT_DELETE_ME)
-                self.assertEqual(self.jazz.get_folder_name(parent),
-                                 PARENT_DELETE_ME,
+                self.assertEqual(PARENT_DELETE_ME,
+                                 self.jazz.get_folder_name(parent),
                                  "create a folder")
 
             def test_04_create_nested_folder(self):
@@ -192,8 +191,8 @@ if TEST_CREATE:
                 CHILD_FOLDER = "child_folder"
                 parent = self.jazz.create_folder(PARENT_NESTED_FOLDER)
                 child = self.jazz.create_folder(CHILD_FOLDER, parent_folder=parent)
-                self.assertEqual(self.jazz.get_folder_name(child),
-                                 CHILD_FOLDER,
+                self.assertEqual(CHILD_FOLDER,
+                                 self.jazz.get_folder_name(child),
                                  "create a child folder")
 
         def test_05_create_resource(self):
