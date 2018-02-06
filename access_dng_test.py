@@ -14,17 +14,19 @@ jazz = ad.Jazz(server_alias="sandbox", config_path=ad.JAZZ_CONFIG_PATH)
 # TEST_RECORD_2 = 67382               # 50162
 TEST_RECORD_1 = jazz.jazz_config['TEST_RECORD_1']
 TEST_RECORD_2 = jazz.jazz_config['TEST_RECORD_2']
+TEST_COLLECTION_1 = jazz.jazz_config['TEST_COLLECTION_1']
 SELECT_ALL = '*'
 SELECT_ONE = "dcterms:identifier"
 SELECT_TWO = "dcterms:title,dcterms:description"
 WHERE_ALL = "*"
 WHERE_ONE = f"dcterms:identifier={TEST_RECORD_1}"
 WHERE_TWO = f"dcterms:identifier in [{TEST_RECORD_1},{TEST_RECORD_2}]"
+WHERE_ONE_COLLEECTION = f"dcterms:identifier in [{TEST_COLLECTION_1}]"
 
 PROJECT = 'Open Requirements Sandbox'
 
 
-TEST_CREATE = True
+TEST_CREATE = False
 TEST_QUERY = True
 
 
@@ -144,6 +146,23 @@ if TEST_QUERY:
 
             result = self.jazz.read(query_result['Requirements'][0])
             pass
+
+
+        def test_query_where_04(self):
+            """Locate dcterms:identifier in [{TEST_COLLECTION_1}], select all fields ('*')"""
+            query_result = self.jazz.query(
+                oslc_prefix='dcterms=<http://purl.org/dc/terms/>',
+                oslc_select='*',
+                oslc_where=WHERE_ONE_COLLEECTION
+            )
+            # todo: Check that the correct fields are returned
+            self.assertEqual("Query Results: 1", query_result['result'], "Should return one records.")
+            self.assertEqual(1, len(query_result['RequirementCollections']), "Should be one result")
+            self.assertNotIn('Requirements', query_result, "No Requirements should be returned")
+
+            result = self.jazz.read(query_result['RequirementCollections'][0])
+            pass
+
 
 if TEST_CREATE:
     class TestCreateFolder(Jazz_Test):
