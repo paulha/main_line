@@ -1,5 +1,6 @@
 
-import lxml as etree
+# import lxml as etree
+from lxml import etree
 import re
 import utility_funcs.logger_yaml as log
 from jazz.dng import Jazz
@@ -81,6 +82,14 @@ class DNGRequest:
 
     def put(self) -> object:
         # TODO: previews of coming attractions!
+        text = etree.tostring(self.xml_root, pretty_print=True)
+        etag = self.xml_root.attrib['ETag'] if 'ETag' in self.xml_root.attrib else None
+        del self.xml_root.attrib['ETag']
+        log.logger.info(f"About to put {text}")
+        response = self.jazz_client._post_xml(self.artifact_uri,
+                                              data=text,
+                                              if_match=etag)
+        log.logger.info(f"Result was {response}")
         return self
 
 

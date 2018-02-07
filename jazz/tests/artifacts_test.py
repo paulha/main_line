@@ -113,6 +113,7 @@ if True:
             requirement.get()
             requirement_collection = RequirementCollection(self.jazz, found_resources['RequirementCollections'][0], op_name='FindResourcesTestCases')
             requirement_collection.get()
+            requirement_collection.put()
             pass
 
 

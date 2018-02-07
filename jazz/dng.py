@@ -116,15 +116,20 @@ class Jazz:
         # -- Preserve ETag header
         if 'ETag' in response.headers:
             root.attrib['ETag'] = response.headers['ETag']
+
         return root
 
-    def _post_xml(self, url, data=None, json=None, op_name="", mode="a"):
+    def _post_xml(self, url, data=None, json=None, if_match: str=None, op_name="", mode="a"):
         self.logger.info(f"_post_xml('{url}', {op_name})")
-        response = self.jazz_session.post(url, data=data, json=json,
-                                          headers={'OSLC-Core-Version': '2.0',
-                                                   'Accept': 'application/rdf+xml',
-                                                   "Content-Type": "application/rdf+xml"},
-                                          stream=True, verify=False)
+        headers = {'OSLC-Core-Version': '2.0',
+                   'Accept': 'application/rdf+xml',
+                   "Content-Type": "application/rdf+xml"}
+        # -- add the If-Match ETag value as needed...
+        if if_match is not None:
+            headers['If-Match'] = if_match
+
+        response = self.jazz_session.post(url, data=data, json=json, headers=headers, stream=True, verify=False)
+
         if response.status_code >= 400 and response.status_code <= 499:
             # Error 4XX:
             logger = self.logger.error
