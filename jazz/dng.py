@@ -157,6 +157,55 @@ class Jazz:
                 f.write(f"<!-- {op_name if op_name is not None else '-->'} cookies:  {response.cookies} -->\n")
                 f.write(f"<!-- {op_name if op_name is not None else '-->'} headers:  {response.headers} -->\n")
                 f.write(response.text+"\n")
+                if data is not None or json is not None:
+                    f.write(f"<!--\n")
+                    f.write(f"{data if data is not None else json}\n")
+                    f.write(f"-->\n")
+
+        return response
+
+    def _put_xml(self, url, data=None, if_match: str=None, op_name="", mode="a"):
+        self.logger.info(f"_put_xml('{url}', {op_name})")
+        headers = {'OSLC-Core-Version': '2.0',
+                   'Accept': 'application/rdf+xml',
+                   "Content-Type": "application/rdf+xml"}
+        # -- add the If-Match ETag value as needed...
+        if if_match is not None:
+            headers['If-Match'] = if_match
+
+        response = self.jazz_session.put(url, data=data, headers=headers, stream=True, verify=False)
+
+        if response.status_code >= 400 and response.status_code <= 499:
+            # Error 4XX:
+            logger = self.logger.error
+        elif response.status_code >= 300 and response.status_code <= 399:
+            # Warning 3XX:
+            logger = self.logger.warning
+        else:
+            # Everything else...
+            logger = self.logger.debug
+
+        logger(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
+        logger(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
+        logger(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
+        logger(f"{url}\n{response.text}\n====")
+
+        if op_name is not None:
+            if op_name not in self.reset_list:
+                local_mode = "w"
+                self.reset_list.append(op_name)
+            else:
+                local_mode = mode
+            with open(op_name + '.xml', local_mode) as f:
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} request:  POST {url} -->\n")
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} response: {response.status_code} -->\n")
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} cookies:  {response.cookies} -->\n")
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} headers:  {response.headers} -->\n")
+                f.write(response.text+"\n")
+                if data is not None:
+                    f.write(f"<!--\n")
+                    f.write(f"{data}\n")
+                    f.write(f"-->\n")
 
         return response
 

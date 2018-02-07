@@ -104,7 +104,7 @@ if True:
             that have that ID as a parent.
             """
             search_path = self.jazz.jazz_config['DIRECTORY_2']
-            fs_finder = Folder(self.jazz)
+            fs_finder = Folder(self.jazz, op_name='FindResourcesTestCases')
             found_resources = fs_finder.get_folder_artifacts(search_path)
             self.assertEqual(3, len(found_resources['Requirements']), "Should find 3 requirements")
             self.assertEqual(2, len(found_resources['RequirementCollections']), "Should find 3 requirements")
@@ -113,7 +113,11 @@ if True:
             requirement.get()
             requirement_collection = RequirementCollection(self.jazz, found_resources['RequirementCollections'][0], op_name='FindResourcesTestCases')
             requirement_collection.get()
-            requirement_collection.put()
+            description_node = requirement_collection.xml_root.xpath("//dcterms:description", namespaces=Jazz.xpath_namespace())
+            if len(description_node)==0:
+                raise Exception("Could not find Description node.")
+            description_node[0].text += "\nThis is a new line."
+            response = requirement_collection.put()
             pass
 
 

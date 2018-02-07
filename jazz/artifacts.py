@@ -86,10 +86,14 @@ class DNGRequest:
         etag = self.xml_root.attrib['ETag'] if 'ETag' in self.xml_root.attrib else None
         del self.xml_root.attrib['ETag']
         log.logger.info(f"About to put {text}")
-        response = self.jazz_client._post_xml(self.artifact_uri,
-                                              data=text,
-                                              if_match=etag)
+        response = self.jazz_client._put_xml(self.artifact_uri,
+                                             data=text,
+                                             if_match=etag,
+                                             op_name=self.op_name)
         log.logger.info(f"Result was {response}")
+        if response.status_code >= 400 and response.status_code <= 499:
+            raise Exception(f"Result was {response}. Couldn't put artifact.")
+
         return self
 
 
