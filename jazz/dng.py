@@ -26,7 +26,8 @@ JAZZ_CONFIG_PATH = f"{dirname(realpath(sys.argv[0]))}/config.yaml{pathsep}~/.jaz
 XML_LOG_FILE = "Dialog"
 
 class Jazz:
-    def get_xpath_namespace(self):
+    @classmethod
+    def xpath_namespace(cls):
         return {
             "acc": "http://open-services.net/ns/core/acc#",
             "acp": "http://jazz.net/ns/acp#",
@@ -41,10 +42,11 @@ class Jazz:
             "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
             "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
             "rm": "http://www.ibm.com/xmlns/rdm/rdf/",
+            "rm_jazz": "http://jazz.net/ns/rm#",
         }
 
     def get_xpath_string(self):
-        return ", ".join([f"{name}=<{uri}>" for name, uri in self.get_xpath_namespace().items()])
+        return ", ".join([f"{name}=<{uri}>" for name, uri in Jazz.xpath_namespace().items()])
 
     
     def __init__(self, server_alias=None, config_path=None, namespace=None, log=log):
@@ -235,12 +237,12 @@ class Jazz:
         # provider_query = self._get_xml(self.get_service_provider(), op_name=XML_LOG_FILE)
 
         folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
-        folder_query_uri = self.get_service_provider_root().xpath(folder_query_xpath, namespaces=self.get_xpath_namespace())[0]
+        folder_query_uri = self.get_service_provider_root().xpath(folder_query_xpath, namespaces=Jazz.xpath_namespace())[0]
 
         folder_result_xml = self._get_xml(folder_query_uri, op_name=XML_LOG_FILE)
 
         root_folder_xpath = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
-        root_path_uri = folder_result_xml.xpath(root_folder_xpath, namespaces=self.get_xpath_namespace())[0]
+        root_path_uri = folder_result_xml.xpath(root_folder_xpath, namespaces=Jazz.xpath_namespace())[0]
 
         return root_path_uri
 
@@ -288,7 +290,7 @@ class Jazz:
         if resource_type not in self._requirement_factory:
             requirement_factory_xpath = f'//oslc:CreationFactory/oslc:resourceType[@rdf:resource="{resource_type}"]/../oslc:creation/@rdf:resource'
             self._requirement_factory[resource_type] = self.get_service_provider_root().xpath(requirement_factory_xpath,
-                                                                                              namespaces=self.get_xpath_namespace())[0]
+                                                                                              namespaces=Jazz.xpath_namespace())[0]
         return self._requirement_factory[resource_type]
 
     def get_shapes_nodes(self, resource_type: str="http://open-services.net/ns/rm#Requirement"):
@@ -296,10 +298,10 @@ class Jazz:
         if resource_type not in self._shapes_nodes_root:
             requirement_factory_shapes_xpath = f'//oslc:CreationFactory/oslc:resourceType[@rdf:resource="{resource_type}"]/../oslc:resourceShape/@rdf:resource'
             requirement_factory_shapes = self.get_service_provider_root().xpath(requirement_factory_shapes_xpath,
-                                                                                namespaces=self.get_xpath_namespace())
+                                                                                namespaces=Jazz.xpath_namespace())
             self._shapes_nodes_root[resource_type] = {
                 resource_shape.xpath("//oslc:ResourceShape/dcterms:title/text()",
-                                     namespaces=self.get_xpath_namespace())[0]: resource_shape
+                                     namespaces=Jazz.xpath_namespace())[0]: resource_shape
                 for resource_shape in
                 [self._get_xml(shape, op_name='shapes') for shape in requirement_factory_shapes]
             }
@@ -318,7 +320,7 @@ class Jazz:
     def get_shape_url(self, shape_type: str="", resource_type: str="http://open-services.net/ns/rm#Requirement"):
         shape_nodes = self.get_shapes_nodes(resource_type)
         if shape_type in shape_nodes:
-            shape_uri = shape_nodes[shape_type].xpath("//oslc:ResourceShape/@rdf:about", namespaces=self.get_xpath_namespace())[0]
+            shape_uri = shape_nodes[shape_type].xpath("//oslc:ResourceShape/@rdf:about", namespaces=Jazz.xpath_namespace())[0]
         else:
             raise Exception(f"Did not find {shape_type} in defined shapes for {resource_type}")
 
@@ -332,13 +334,13 @@ class Jazz:
         requirement_root = self._get_xml(uri, "create requirement")
         shape_text = etree.tostring(self.get_shape_node_root(shape_type=self.jazz_config['requirement_shape'], resource_type=resource_type))
         names = [value for value in self.get_shape_node_root(shape_type=self.jazz_config['requirement_shape'], resource_type=resource_type)
-                  .xpath('//oslc:name/text()', namespaces=self.get_xpath_namespace())]
+                  .xpath('//oslc:name/text()', namespaces=Jazz.xpath_namespace())]
         pass
 
 
     def get_folder_name(self, folder: str) -> str:
         folder_xml = self._get_xml(folder, op_name=XML_LOG_FILE)
-        node = folder_xml.xpath("//dcterms:title/text()", namespaces=self.get_xpath_namespace())
+        node = folder_xml.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
         return node[0]
 
     # -----------------------------------------------------------------------------------------------------------------

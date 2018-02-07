@@ -1,7 +1,8 @@
 import unittest
 from lxml import etree
 from .dng_test import JazzTest
-from jazz.artifacts import RequirementRequest, Folder
+from jazz.artifacts import RequirementRequest, RequirementCollection, Folder
+from jazz.dng import Jazz
 
 sample = """
 <rdf:RDF
@@ -32,19 +33,21 @@ sample = """
 
 class RequirementTestCases(JazzTest):
     def test_01_requirement_get(self):
-        r = RequirementRequest(property_uri='property', instanceShape='shape', parent='parent',
-                               description="This is some description")
+        r = RequirementRequest(self.jazz, artifact_uri='artifact', instance_shape='shape', parent='parent',
+                               property_uri='property', description="This is some description")
+        self.assertEqual(r.artifact_uri, 'artifact')
         self.assertEqual(r.property_uri, 'property')
         self.assertEqual(r.instanceShape, 'shape')
         self.assertEqual(r.parent, 'parent')
         self.assertEqual(r['description'], 'This is some description')
 
     def test_02_requirement_set(self):
-        r = RequirementRequest(property_uri='property', instanceShape='shape', parent='parent')
+        r = RequirementRequest(self.jazz, artifact_uri='artifact', property_uri='property', instance_shape='shape', parent='parent')
         r.property_url = 'property'
         r.instance_shape = 'shape'
         r.parent_folder = 'parent'
         r['description'] = 'This is some description'
+        self.assertEqual(r.artifact_uri, 'artifact')
         self.assertEqual(r.property_uri, 'property')
         self.assertEqual(r.instanceShape, 'shape')
         self.assertEqual(r.parent, 'parent')
@@ -52,7 +55,7 @@ class RequirementTestCases(JazzTest):
 
     def test_03_requirement_read(self):
         root = etree.fromstring(sample)
-        r = RequirementRequest(property_uri='property', instanceShape='shape', parent='parent')
+        r = RequirementRequest(self.jazz, artifact_uri='property', instance_shape='shape', parent='parent')
         r.initialize_from_xml(root)
 
 class FolderTestcases(JazzTest):
@@ -70,34 +73,47 @@ class FindFolderTestCases(JazzTest):
         self.assertEqual([], found, "Empty path should return None")
 
     def test_10_find_top_dir_path(self):
+        search_path = self.jazz.jazz_config['DIRECTORY_1']
         fs_finder = Folder(self.jazz)
-        found = fs_finder.get_matching_folder_uri("pfh -- NewFolder")
+        found = fs_finder.get_matching_folder_uri(search_path)
         self.assertGreater(len(found), 0, "one or more found paths")
         folders = [self.jazz._get_xml(uri, op_name='read folders') for uri in found]
-        pass
+        expected_name = search_path.split('/')[-1]
+        for folder in folders:
+            found_name = folder.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
+            self.assertEqual(expected_name, found_name, "Expected and found name should be the same")
 
     def test_20_find_top_dir_path(self):
+        search_path = self.jazz.jazz_config['DIRECTORY_2']
         fs_finder = Folder(self.jazz)
-        found = fs_finder.get_matching_folder_uri("pfh -- NewFolder/subfolder to pff")
+        found = fs_finder.get_matching_folder_uri(search_path)
         self.assertGreater(len(found), 0, "one or more found paths")
-        folders = self.jazz._get_xml(found[0], op_name='read folders')
-        about = folders.xpath(".//nav:folder/@rdf:about", namespaces=fs_finder.xpath_namespaces())[0]
-        resources = self.jazz._get_xml(about, op_name='read folders')
-        provdr = folders.xpath(".//oslc:serviceProvider/@rdf:resource", namespaces=fs_finder.xpath_namespaces())[0]
-        provider = self.jazz._get_xml(provdr, op_name='read folders')
-        folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
-        folder_query = provider.xpath(folder_query_xpath,
-                                      namespaces=fs_finder.xpath_namespaces())
-        x = self.jazz._get_xml(folder_query[0], op_name='read folders')
-
-        """
-        To find the resources in a folder, find the ID of the folder and then find all the resources
-        that have that ID as a parent.
-        """
-
+        folders = [self.jazz._get_xml(uri, op_name='read folders') for uri in found]
+        expected_name = search_path.split('/')[-1]
+        for folder in folders:
+            found_name = folder.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
+            self.assertEqual(expected_name, found_name, "Expected and found name should be the same")
         pass
 
 
+if True:
+    class FindResourcesTestCases(JazzTest):
+        def test_20_get_folder_artifacts(self):
+            """
+            To find the resources in a folder, find the ID of the folder and then find all the resources
+            that have that ID as a parent.
+            """
+            search_path = self.jazz.jazz_config['DIRECTORY_2']
+            fs_finder = Folder(self.jazz)
+            found_resources = fs_finder.get_folder_artifacts(search_path)
+            self.assertEqual(3, len(found_resources['Requirements']), "Should find 3 requirements")
+            self.assertEqual(2, len(found_resources['RequirementCollections']), "Should find 3 requirements")
+
+            requirement = RequirementRequest(self.jazz, found_resources['Requirements'][0], op_name='FindResourcesTestCases')
+            requirement.get()
+            requirement_collection = RequirementCollection(self.jazz, found_resources['RequirementCollections'][0], op_name='FindResourcesTestCases')
+            requirement_collection.get()
+            pass
 
 
 if __name__ == '__main__':
