@@ -49,10 +49,11 @@ class Jazz:
         return ", ".join([f"{name}=<{uri}>" for name, uri in Jazz.xpath_namespace().items()])
 
     
-    def __init__(self, server_alias=None, config_path=None, namespace=None, log=log):
+    def __init__(self, server_alias=None, config_path=None, namespace=None, op_name=XML_LOG_FILE, log=log):
         self.jazz_session = requests.Session()
         self.logger = log.logger
         self.namespace = namespace
+        self.op_name = op_name
         self.reset_list = []
         self.jazz_config = None
         self._root_services = None
@@ -77,6 +78,8 @@ class Jazz:
         return x[0] if len(x) > 0 else None
 
     def _get_xml(self, url, op_name=None, mode="a"):
+        op_name = self.op_name if op_name is None else op_name
+
         self.logger.info(f"_get_xml('{url}', {op_name})")
         response = self.jazz_session.get(url,
                                          headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
@@ -119,7 +122,9 @@ class Jazz:
 
         return root
 
-    def _post_xml(self, url, data=None, json=None, if_match: str=None, op_name="", mode="a"):
+    def _post_xml(self, url, data=None, json=None, if_match: str=None, op_name=None, mode="a"):
+        op_name = self.op_name if op_name is None else op_name
+
         self.logger.info(f"_post_xml('{url}', {op_name})")
         headers = {'OSLC-Core-Version': '2.0',
                    'Accept': 'application/rdf+xml',
@@ -164,7 +169,9 @@ class Jazz:
 
         return response
 
-    def _put_xml(self, url, data=None, if_match: str=None, op_name="", mode="a"):
+    def _put_xml(self, url, data=None, if_match: str=None, op_name=None, mode="a"):
+        op_name = self.op_name if op_name is None else op_name
+
         self.logger.info(f"_put_xml('{url}', {op_name})")
         headers = {'OSLC-Core-Version': '2.0',
                    'Accept': 'application/rdf+xml',
@@ -279,21 +286,16 @@ class Jazz:
 
     def get_query_base(self):
         if self._query_base is None:
-            # query_section = self.RootServices['catalogs'][0]['projects'][self.jazz_config['project']]['services']['Query Capability']
-            # self._query_base = query_section['queryBase']
-            # query_capability = "//oslc:QueryCapability[dcterms:title=\"Folder Query Capability\"]/oslc:queryBase/@rdf:resource"
             query_capability = "//oslc:QueryCapability[dcterms:title=\"Query Capability\"]/oslc:queryBase/@rdf:resource"
             self._query_base = self.get_service_provider_root().xpath(query_capability, namespaces=self.namespace)[0]
 
         return self._query_base
 
-    def discover_root_folder(self):
-        # provider_query = self._get_xml(self.get_service_provider(), op_name=XML_LOG_FILE)
-
+    def discover_root_folder(self, op_name=None):
         folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
         folder_query_uri = self.get_service_provider_root().xpath(folder_query_xpath, namespaces=Jazz.xpath_namespace())[0]
 
-        folder_result_xml = self._get_xml(folder_query_uri, op_name=XML_LOG_FILE)
+        folder_result_xml = self._get_xml(folder_query_uri, op_name=op_name)
 
         root_folder_xpath = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
         root_path_uri = folder_result_xml.xpath(root_folder_xpath, namespaces=Jazz.xpath_namespace())[0]
@@ -380,26 +382,28 @@ class Jazz:
 
         return shape_uri
 
-    def create_requirement(self, parent_folder_URI: str=None, resource_type: str="http://open-services.net/ns/rm#Requirement"):
+    def create_requirement(self, parent_folder_URI: str=None,
+                           resource_type: str="http://open-services.net/ns/rm#Requirement",
+                           op_name: str=None):
         self.logger.info(f"create_requirement('{parent_folder_URI}')")
         factory_root = self.get_service_provider_root()
         resource_shapes_roots = self.get_shapes_nodes(resource_type=resource_type)
         uri = self.get_shape_url(shape_type=self.jazz_config['requirement_shape'])
-        requirement_root = self._get_xml(uri, "create requirement")
+        requirement_root = self._get_xml(uri, op_name=op_name)
         shape_text = etree.tostring(self.get_shape_node_root(shape_type=self.jazz_config['requirement_shape'], resource_type=resource_type))
         names = [value for value in self.get_shape_node_root(shape_type=self.jazz_config['requirement_shape'], resource_type=resource_type)
                   .xpath('//oslc:name/text()', namespaces=Jazz.xpath_namespace())]
         pass
 
 
-    def get_folder_name(self, folder: str) -> str:
-        folder_xml = self._get_xml(folder, op_name=XML_LOG_FILE)
+    def get_folder_name(self, folder: str, op_name=None) -> str:
+        folder_xml = self._get_xml(folder, op_name=op_name)
         node = folder_xml.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
         return node[0]
 
     # -----------------------------------------------------------------------------------------------------------------
 
-    def query(self, oslc_prefix=None, oslc_select=None, oslc_where=None):
+    def query(self, oslc_prefix=None, oslc_select=None, oslc_where=None, op_name=None):
         query = self.get_query_base()
         prefix = oslc_prefix if oslc_prefix is not None \
                     else ",".join([f'{key}=<{link}>' for key, link in self.namespace.items()])
@@ -408,7 +412,7 @@ class Jazz:
         select = "&"+urlencode({'oslc.select': oslc_select}) if oslc_select is not None else ""
         where = "&"+urlencode({'oslc.where': oslc_where}) if oslc_where is not None else ""
         query_text = f"{query}{prefix}{select}{where}"
-        query_root = self._get_xml(query_text, XML_LOG_FILE)
+        query_root = self._get_xml(query_text, op_name=op_name)
         # -- Does it really make sense to do this:? Might make more sense to return the xml document 'query_root'...
         query_result = {'query_text': query_text, 'query_root': query_root, 'query_result': etree.tostring(query_root)}
         self._add_from_xml(query_result, query_root, 'result', './oslc:ResponseInfo/dcterms:title', func=Jazz._get_text)
@@ -417,12 +421,12 @@ class Jazz:
         self._add_from_xml(query_result, query_root, 'Requirements', '//oslc_rm:Requirement/@rdf:about')
         return query_result
 
-    def _get_resources(self, resource_list, section_tag=XML_LOG_FILE):
-        return [self._get_xml(resource_url, section_tag, mode="a+") for resource_url in resource_list]
+    def _get_resources(self, resource_list, op_name=None):
+        return [self._get_xml(resource_url, op_name=op_name, mode="a+") for resource_url in resource_list]
 
 
-    def read(self, resource_url, section_tag=XML_LOG_FILE):
-        root_element = self._get_xml(resource_url, section_tag, mode="a+")
+    def read(self, resource_url, op_name=None):
+        root_element = self._get_xml(resource_url, op_name=op_name, mode="a+")
         this_item = {'Root': root_element, 'resource_url': resource_url}
         self._add_from_xml(this_item, root_element, 'about', './rdf:Description/@rdf:about')
         self._add_from_xml(this_item, root_element, 'modified', './rdf:Description/dcterms:modified', func=Jazz._get_text)
@@ -450,9 +454,8 @@ class Jazz:
 
 
 def main():
-    j = Jazz(server_alias="sandbox", config_path=JAZZ_CONFIG_PATH)
-    query_result = j.query(# oslc_prefix='rdf=<http://www.w3.org/1999/02/22-rdf-syntax-ns#>,calm=<http://jazz.net/xmlns/prod/jazz/calm/1.0>,rm=<http://www.ibm.com/xmlns/rdm/rdf/>,oslc=<http://open-services.net/ns/core#>,jp10=<http://jazz.net/xmlns/prod/jazz/process/1.0/>,oslc_config=<http://open-services.net/ns/config#>,dcterms=<http://purl.org/dc/terms/>',
-                           oslc_prefix='dcterms=<http://purl.org/dc/terms/>',
+    j = Jazz(server_alias="sandbox", config_path=JAZZ_CONFIG_PATH, op_name=XML_LOG_FILE)
+    query_result = j.query(oslc_prefix='dcterms=<http://purl.org/dc/terms/>',
                            oslc_select='*',         # 'dcterms:identifier',
                            oslc_where='dcterms:identifier=67383'
                            )
