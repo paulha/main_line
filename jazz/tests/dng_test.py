@@ -1,8 +1,11 @@
 import unittest
 
 from jazz import dng as ad
+from jazz.artifacts import Folder, RequirementRequest, RequirementCollection
 import urllib3
 import utility_funcs.logger_yaml as log
+
+from lxml import etree
 
 # -- Login
 urllib3.disable_warnings()
@@ -195,7 +198,13 @@ class TestCreateFolder(JazzTest):
                              "create a child folder")
 
         def test_05_create_resource(self):
-            resource = self.jazz.create_requirement()
+            uri = self.jazz.create_requirement(name="My Test Resource", description="Here is some description!",
+                                                    parent_folder_URI=self.jazz.discover_root_folder())
+
+            # At this point, the resource has been created but we have to read it to have a local copy...
+            created = RequirementRequest(self.jazz, artifact_uri=uri)
+            created.get()
+            s = etree.tostring(created.xml_root)
             return
 
 

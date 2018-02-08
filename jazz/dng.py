@@ -60,6 +60,7 @@ class Jazz:
         self._root_services_catalogs = None
         self._service_provider = None
         self._service_provider_root = None
+        self._creation_factory = None
         self._query_base = None
         self._requirement_factory = {}
         self._shapes_nodes_root = {}
@@ -284,6 +285,14 @@ class Jazz:
 
         return self._service_provider_root
 
+    def get_creation_factory_url(self):
+        self.logger.info(f"get_creation_factory()")
+        if self._creation_factory is None:
+            creation_factory = "//oslc:creation/@rdf:resource"
+            self._creation_factory = self.get_service_provider_root().xpath(creation_factory, namespaces=self.namespace)[0]
+
+        return self._creation_factory
+
     def get_query_base(self):
         if self._query_base is None:
             query_capability = "//oslc:QueryCapability[dcterms:title=\"Query Capability\"]/oslc:queryBase/@rdf:resource"
@@ -302,16 +311,16 @@ class Jazz:
 
         return root_path_uri
 
-    def create_folder(self, folder_name: str=None, parent_folder: str=None) -> str:
-        self.logger.info(f"create_folder('{folder_name}')")
+    def create_folder(self, name: str=None, parent_folder: str=None, op_name: str=None) -> str:
+        self.logger.info(f"create_folder('{name}')")
 
         service_provider_url = self.get_service_provider()
 
         # Get the Project ID String
         project_id= re.split('/', service_provider_url)[-2]
 
-        if folder_name is None:
-            folder_name = "OSLC Created";
+        if name is None:
+            name = "OSLC Created";
 
         if parent_folder is None:
             parent_folder = self.discover_root_folder()
@@ -335,7 +344,10 @@ class Jazz:
                 </rdf:Description>
             </rdf:RDF>
         '''
-        response = self._post_xml(folder_creation_factory, op_name=XML_LOG_FILE, data=xml)
+        response = self._post_xml(folder_creation_factory, op_name=op_name, data=xml)
+        if response.status_code not in (201):
+            raise PermissionError(f"Unable to create folder '{folder_name}', result status {response.status_code}")
+
         return response.headers['location']
 
     def delete_folder(self, folder: str):
@@ -382,18 +394,39 @@ class Jazz:
 
         return shape_uri
 
-    def create_requirement(self, parent_folder_URI: str=None,
+    def create_requirement(self, name: str=None, description: str=None, parent_folder_URI: str=None,
                            resource_type: str="http://open-services.net/ns/rm#Requirement",
                            op_name: str=None):
         self.logger.info(f"create_requirement('{parent_folder_URI}')")
         factory_root = self.get_service_provider_root()
         resource_shapes_roots = self.get_shapes_nodes(resource_type=resource_type)
-        uri = self.get_shape_url(shape_type=self.jazz_config['requirement_shape'])
-        requirement_root = self._get_xml(uri, op_name=op_name)
+        shape_uri = self.get_shape_url(shape_type=self.jazz_config['requirement_shape'])
+        requirement_root = self._get_xml(shape_uri, op_name=op_name)
         shape_text = etree.tostring(self.get_shape_node_root(shape_type=self.jazz_config['requirement_shape'], resource_type=resource_type))
         names = [value for value in self.get_shape_node_root(shape_type=self.jazz_config['requirement_shape'], resource_type=resource_type)
-                  .xpath('//oslc:name/text()', namespaces=Jazz.xpath_namespace())]
-        pass
+                 .xpath('//oslc:name/text()', namespaces=Jazz.xpath_namespace())]
+
+        xml = f"""
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/terms/"
+                     xmlns:public_rm_10="http://www.ibm.com/xmlns/rm/public/1.0/"
+                     xmlns:calm="http://jazz.net/xmlns/prod/jazz/calm/1.0/" xmlns:rm="http://www.ibm.com/xmlns/rdm/rdf/"
+                     xmlns:acp="http://jazz.net/ns/acp#" xmlns:rm_property="https://grarrc.ibm.com:9443/rm/types/"
+                     xmlns:oslc="http://open-services.net/ns/core#" xmlns:nav="http://jazz.net/ns/rm/navigation#"
+                     xmlns:oslc_rm="http://open-services.net/ns/rm#">
+                <rdf:Description rdf:about="">
+                    <rdf:type rdf:resource="http://open-services.net/ns/rm#Requirement"/>
+                    <dc:description rdf:parseType="Literal">{description if description is not None else ''}</dc:description>
+                    <dc:title rdf:parseType="Literal">{name}</dc:title>
+                    <oslc:instanceShape rdf:resource="{shape_uri}"/>
+                    <nav:parent rdf:resource="{parent_folder_URI if parent_folder_URI is not None else ''}"/>
+                </rdf:Description>
+            </rdf:RDF>
+            """
+        requirement_creation_factory = self.get_requirement_factory()
+        # _post_xml actually receives the returned content for the requested resource.
+        response = self._post_xml(requirement_creation_factory, op_name=op_name, data=xml)
+        uri = response.headers['location']
+        return uri
 
 
     def get_folder_name(self, folder: str, op_name=None) -> str:
