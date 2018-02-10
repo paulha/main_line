@@ -1,4 +1,4 @@
-from .artifacts import Folder, RequirementRequest, RequirementCollection
+# from .artifacts import Folder, RequirementRequest, RequirementCollection
 
 # -- Support
 import sys
@@ -337,7 +337,7 @@ class Jazz:
 
         return root_path_uri
 
-    def create_folder(self, name: str=None, parent_folder: str=None, op_name: str=None) -> str:
+    def create_folder(self, name: str=None, parent_folder: str=None, op_name: str=None) -> object:
         self.logger.info(f"create_folder('{name}')")
 
         service_provider_url = self.get_service_provider()
@@ -365,7 +365,7 @@ class Jazz:
                     xmlns:rm="http://jazz.net/ns/rm#">
                 <rdf:Description rdf:nodeID="A0">
                     <rdf:type rdf:resource="http://jazz.net/ns/rm/navigation#folder"/>
-                    <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string">{folder_name}</dcterms:title>
+                    <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string">{name}</dcterms:title>
                     <nav:parent rdf:resource="{parent_folder}"/>
                 </rdf:Description>
             </rdf:RDF>
@@ -373,14 +373,17 @@ class Jazz:
         response = None
 
         def get_response(resp):
+            nonlocal response
             response = resp
 
-        xml_response = self._post_xml(folder_creation_factory, op_name=op_name, data=xml)
+        xml_response = self._post_xml(folder_creation_factory, op_name=op_name, data=xml, check=get_response)
 
-        if response.status_code not in (201):
+        if response.status_code not in [201]:
             raise PermissionError(f"Unable to create folder '{folder_name}', result status {response.status_code}")
 
-        return Folder(xml_root=xml_response)
+        # fixme: HACK
+        from .artifacts import Folder
+        return Folder(self, xml_root=xml_response)
 
     def delete_folder(self, folder: str):
         raise Exception("Not Yet Implemented")
@@ -428,7 +431,7 @@ class Jazz:
 
     def create_requirement(self, name: str=None, description: str=None, parent_folder_URI: str=None,
                            resource_type: str="http://open-services.net/ns/rm#Requirement",
-                           op_name: str=None):
+                           op_name: str=None) -> object:
         self.logger.info(f"create_requirement('{parent_folder_URI}')")
         factory_root = self.get_service_provider_root()
         resource_shapes_roots = self.get_shapes_nodes(resource_type=resource_type)
@@ -459,14 +462,17 @@ class Jazz:
         response = None
 
         def get_response(resp):
+            nonlocal response
             response = resp
 
-        xml_response = self._post_xml(requirement_creation_factory, op_name=op_name, data=xml, check=get_response())
+        xml_response = self._post_xml(requirement_creation_factory, op_name=op_name, data=xml, check=get_response)
 
-        if response.status_code not in (201):
+        if response.status_code not in [201]:
             raise PermissionError(f"Unable to create requirement '{name}', result status {response.status_code}")
 
-        return RequirementRequest(xml_root=xml_response)
+        # fixme: HACK
+        from .artifacts import RequirementRequest
+        return RequirementRequest(self, xml_root=xml_response)
 
 
     def get_folder_name(self, folder: str, op_name=None) -> str:

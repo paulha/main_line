@@ -2,11 +2,12 @@
 from lxml import etree
 import re
 import utility_funcs.logger_yaml as log
-# from jazz.dng import Jazz
+from .dng import Jazz
+
 
 class DNGRequest:
     # -- Note: ETag is stored in attrib list of xml_root
-    def __init__(self, jazz_client: object,
+    def __init__(self, jazz_client: Jazz,
                  artifact_uri: str=None, title: str = None, description: str=None, parent: str=None, xml_root=None,
                  instance_shape: str=None, property_uri: str=None,
                  primary_list: list=[], primary: dict={},
@@ -20,7 +21,6 @@ class DNGRequest:
         self.op_name = op_name
         self.parent = parent
         self.title = title
-        self.xml_root = xml_root
 
         self.primary_list = primary_list
         self.primary = primary
@@ -33,8 +33,22 @@ class DNGRequest:
 
         self.E_tag = None
 
+        self.xml_root = xml_root
+        if self.xml_root is not None:
+            self.init_from_xml_root()
+
+        # FIXME: This needs to roll into the line above!
         if self.xml_root is not None:
             self.load()
+
+    def init_from_xml_root(self):
+        # -- Is there a way to get this without programming every field?
+        # todo: need to pick up the folder_uri, also...
+        self.artifact_uri = self.xml_root.xpath("//*/@rdf:about", namespaces=Jazz.xpath_namespace())[0]
+        self.title = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
+        self.description = self.xml_root.xpath("//dcterms:description/text()", namespaces=Jazz.xpath_namespace())[0]
+        self.parent = self.xml_root.xpath("//nav:parent/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
+        # todo: Above should move to common DNGRequest, since all need to do it...
 
     def load(self):
         # TODO: initialize self from xml_root
@@ -132,7 +146,7 @@ class DNGRequest:
                                                   data=text,
                                                   if_match=etag,
                                                   op_name=self.op_name,
-                                                  check=check_response())
+                                                  check=check_response)
 
         return self
 
@@ -220,30 +234,32 @@ class Folder(DNGRequest):
     def __init__(self, jazz_client: object, folder_uri: str=None,
                  title: str = None, description: str=None, parent: str=None, xml_root=None, op_name: str=None):
         super().__init__(jazz_client, title=title, description=description, parent=parent, xml_root=xml_root, op_name=op_name)
-        self.folder_uri = folder_uri
+        self.artifact_uri = folder_uri
         self.op_name = op_name
         self.subfolders = None
         self.component = None
         self.subfolders = None
         self.service_provider = None
 
-        if self.folder_uri is not None:
-            self.read(self.folder_uri)
+        # FIXME: if xml_root has been specified, then need to init from that record...
+        if self.xml_root is not None:
+            self.init_from_xml_root()
+        elif self.artifact_uri is not None:
+            self.read(self.artifact_uri)
         else:
             self.read(self.get_root_folder_uri(op_name=op_name))
 
-    def read(self, folder_uri: str) -> DNGRequest:
-        self.folder_uri = folder_uri
-        self.xml_root = self.jazz_client._get_xml(self.folder_uri, op_name=self.op_name)
-        # -- Is there a way to get this without programming every field?
-        self.title = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
-        self.description = self.xml_root.xpath("//dcterms:description/text()", namespaces=Jazz.xpath_namespace())[0]
-        self.parent = self.xml_root.xpath("//nav:parent/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
+    def init_from_xml_root(self):
+        super().init_from_xml_root()
         self.component = self.xml_root.xpath("//oslc_config:component/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
-        self.subfolders = self.xml_root.xpath("//nav:subfolders/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
         self.service_provider = self.xml_root.xpath("//oslc:serviceProvider/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
-
+        self.subfolders = self.xml_root.xpath("//nav:subfolders/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
         self.subfolders_xml_root = self.jazz_client._get_xml(self.subfolders, op_name=self.op_name)
+
+    def read(self, folder_uri: str) -> DNGRequest:
+        self.artifact_uri = folder_uri
+        self.xml_root = self.jazz_client._get_xml(self.artifact_uri, op_name=self.op_name)
+        self.init_from_xml_root()
         return self
 
     def get_root_folder_uri(self, op_name: str=None) -> str:

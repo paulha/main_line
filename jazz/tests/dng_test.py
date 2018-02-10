@@ -1,6 +1,6 @@
 import unittest
 
-from jazz import dng as ad
+from jazz.dng import Jazz, JAZZ_CONFIG_PATH
 from jazz.artifacts import Folder, RequirementRequest, RequirementCollection
 import urllib3
 import utility_funcs.logger_yaml as log
@@ -9,11 +9,12 @@ from lxml import etree
 
 # -- Login
 urllib3.disable_warnings()
-jazz = ad.Jazz(server_alias="sandbox", config_path=ad.JAZZ_CONFIG_PATH)
+jazz = Jazz(server_alias="sandbox", config_path=JAZZ_CONFIG_PATH)
 
 # -- DNG/One Android/Programs/Test Integration
 # TEST_RECORD_1 = 67383               # 50161
 # TEST_RECORD_2 = 67382               # 50162
+SERVICE_PROVIDER_URL = jazz.jazz_config['SERVICE_PROVIDER_URL']
 TEST_RECORD_1 = jazz.jazz_config['TEST_RECORD_1']
 TEST_RECORD_2 = jazz.jazz_config['TEST_RECORD_2']
 TEST_COLLECTION_1 = jazz.jazz_config['TEST_COLLECTION_1']
@@ -170,7 +171,7 @@ class TestQueryWhere(JazzTest):
 class TestCreateFolder(JazzTest):
     if 'TestCreateFolder' not in jazz.jazz_config:
         def test_01_get_service_provider(self):
-            self.assertEqual("https://rtc-sbox.intel.com/rrc/oslc_rm/_xf5p4XNnEeecjP8b5e9Miw/services.xml",
+            self.assertEqual(SERVICE_PROVIDER_URL,
                              self.jazz.get_service_provider(),
                              "get service provider URL")
 
