@@ -1,13 +1,12 @@
 
-# import lxml as etree
 from lxml import etree
 import re
 import utility_funcs.logger_yaml as log
-from jazz.dng import Jazz
+# from jazz.dng import Jazz
 
 class DNGRequest:
     # -- Note: ETag is stored in attrib list of xml_root
-    def __init__(self, jazz_client: Jazz,
+    def __init__(self, jazz_client: object,
                  artifact_uri: str=None, title: str = None, description: str=None, parent: str=None, xml_root=None,
                  instance_shape: str=None, property_uri: str=None,
                  primary_list: list=[], primary: dict={},
@@ -33,6 +32,45 @@ class DNGRequest:
         self.property_uri = property_uri                        # (Not sure how this one might be used,,,)
 
         self.E_tag = None
+
+        if self.xml_root is not None:
+            self.load()
+
+    def load(self):
+        # TODO: initialize self from xml_root
+        # FIXME: This isn't done yet!
+        self.initialize_from_xml(element=self.xml_root)
+        pass
+
+    def initialize_from_xml(self, element) -> object:
+        for item in element.xpath("//oslc_rm:Requirement/*", namespaces=Jazz.xpath_namespace()):
+            tag = item.tag
+            tag = re.sub(r"^{.*}", "", tag)
+            # todo: Need special handling for oslc:instanceShape, nav:parent, and rm_jazz:primaryText rdf:parseType="Literal"
+            if tag == 'instanceShape':
+                e = item.xpath("//oslc:instanceShape/@rdf:resource", namespaces=Jazz.xpath_namespace())
+                if len(e) == 1:
+                    self[tag] = e[0]
+                else:
+                    log.logger.error(f"Could not resolve instanceShape: {etree.tostring(item)}")
+
+            elif tag == 'parent':
+                e = item.xpath("//nav:parent/@rdf:resource", namespaces=Jazz.xpath_namespace())
+                if len(e) == 1:
+                    self[tag] = e[0]
+                else:
+                    log.logger.error(f"Could not resolve parent: {etree.tostring(item)}")
+
+            elif tag == 'primaryText':
+                e = item.xpath("//rm_jazz:primaryText/*", namespaces=Jazz.xpath_namespace())
+                if len(e) == 1:
+                    self[tag] = e[0]
+                else:
+                    log.logger.error(f"Could not resolve primaryText: {etree.tostring(item)}")
+
+            else:
+                self[tag] = item.text
+        return self
 
     def __getitem__(self, key):
         if hasattr(self, key):
@@ -81,18 +119,20 @@ class DNGRequest:
         return self
 
     def put(self) -> object:
-        # TODO: previews of coming attractions!
+        def check_response(response):
+            log.logger.info(f"Result was {response}")
+            if response.status_code >= 400 and response.status_code <= 499:
+                raise Exception(f"Result was {response}. Couldn't put artifact.")
+
         text = etree.tostring(self.xml_root, pretty_print=True)
         etag = self.xml_root.attrib['ETag'] if 'ETag' in self.xml_root.attrib else None
         del self.xml_root.attrib['ETag']
         log.logger.info(f"About to put {text}")
-        response = self.jazz_client._put_xml(self.artifact_uri,
-                                             data=text,
-                                             if_match=etag,
-                                             op_name=self.op_name)
-        log.logger.info(f"Result was {response}")
-        if response.status_code >= 400 and response.status_code <= 499:
-            raise Exception(f"Result was {response}. Couldn't put artifact.")
+        self.xml_root = self.jazz_client._put_xml(self.artifact_uri,
+                                                  data=text,
+                                                  if_match=etag,
+                                                  op_name=self.op_name,
+                                                  check=check_response())
 
         return self
 
@@ -119,7 +159,7 @@ class RequirementCollection(DNGRequest):
     </oslc_rm:RequirementCollection>
 
     """
-    def __init__(self, jazz_client: Jazz, artifact_uri: str=None, instance_shape: str=None,
+    def __init__(self, jazz_client: object, artifact_uri: str=None, instance_shape: str=None,
                  title: str = None, description: str = None, parent: str = None, xml_root=None,
                  property_uri: str=None, op_name: str=None, **kwargs):
         super().__init__(jazz_client, artifact_uri=artifact_uri, title=title, description=description, parent=parent, xml_root=xml_root,
@@ -153,46 +193,17 @@ class RequirementRequest(DNGRequest):
     </oslc_rm:Requirement>
 
     """
-    def __init__(self, jazz_client: Jazz, artifact_uri: str=None, instance_shape: str=None,
+    def __init__(self, jazz_client: object, artifact_uri: str=None, instance_shape: str=None,
                  title: str = None, description: str = None, parent: str = None, xml_root=None,
                  property_uri: str=None, op_name: str=None, **kwargs):
-        super().__init__(jazz_client, artifact_uri=artifact_uri, title=title, description=description, parent=parent, xml_root=xml_root,
+        super().__init__(jazz_client, artifact_uri=artifact_uri, title=title, description=description,
+                         parent=parent, xml_root=xml_root,
                          primary_list=['uri', 'title', 'identifier', 'type', 'description', 'subject', 'creator', 'modified'],
                          property_uri=property_uri, instance_shape=instance_shape,
                          resource_property_list=['primaryText'], op_name=op_name)
 
         for key in kwargs:
             self[key] = kwargs[key]
-
-    def initialize_from_xml(self, element) -> DNGRequest:
-        for item in element.xpath("//oslc_rm:Requirement/*", namespaces=Jazz.xpath_namespace()):
-            tag = item.tag
-            tag = re.sub(r"^{.*}", "", tag)
-            # todo: Need special handling for oslc:instanceShape, nav:parent, and rm_jazz:primaryText rdf:parseType="Literal"
-            if tag == 'instanceShape':
-                e = item.xpath("//oslc:instanceShape/@rdf:resource", namespaces=Jazz.xpath_namespace())
-                if len(e) == 1:
-                    self[tag] = e[0]
-                else:
-                    log.logger.error(f"Could not resolve instanceShape: {etree.tostring(item)}")
-
-            elif tag == 'parent':
-                e = item.xpath("//nav:parent/@rdf:resource", namespaces=Jazz.xpath_namespace())
-                if len(e) == 1:
-                    self[tag] = e[0]
-                else:
-                    log.logger.error(f"Could not resolve parent: {etree.tostring(item)}")
-
-            elif tag == 'primaryText':
-                e = item.xpath("//rm_jazz:primaryText/*", namespaces=Jazz.xpath_namespace())
-                if len(e) == 1:
-                    self[tag] = e[0]
-                else:
-                    log.logger.error(f"Could not resolve primaryText: {etree.tostring(item)}")
-
-            else:
-                self[tag] = item.text
-        return self
 
 class Folder(DNGRequest):
     """
@@ -206,7 +217,7 @@ class Folder(DNGRequest):
     </nav:folder>
 
     """
-    def __init__(self, jazz_client: Jazz, folder_uri: str=None,
+    def __init__(self, jazz_client: object, folder_uri: str=None,
                  title: str = None, description: str=None, parent: str=None, xml_root=None, op_name: str=None):
         super().__init__(jazz_client, title=title, description=description, parent=parent, xml_root=xml_root, op_name=op_name)
         self.folder_uri = folder_uri

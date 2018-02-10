@@ -1,8 +1,9 @@
+from .artifacts import Folder, RequirementRequest, RequirementCollection
+
 # -- Support
 import sys
 from os.path import pathsep, dirname, realpath
 
-#import lxml as etree
 from lxml import etree
 import pandas as pd
 import requests
@@ -78,7 +79,7 @@ class Jazz:
     def _get_first(x):
         return x[0] if len(x) > 0 else None
 
-    def _get_xml(self, url, op_name=None, mode="a"):
+    def _get_xml(self, url, op_name=None, mode="a", check=None):
         op_name = self.op_name if op_name is None else op_name
 
         self.logger.info(f"_get_xml('{url}', {op_name})")
@@ -113,6 +114,9 @@ class Jazz:
                 f.write(f"<!-- {op_name} headers:  {response.headers} -->\n")
                 f.write(response.text+"\n")
 
+        if check is not None:
+            check(response)
+
         response.raw.decode_content = True
         root = etree.fromstring(response.text)
         # -- Set local namespace mapping from the source document
@@ -123,7 +127,7 @@ class Jazz:
 
         return root
 
-    def _post_xml(self, url, data=None, json=None, if_match: str=None, op_name=None, mode="a"):
+    def _post_xml(self, url, data=None, json=None, if_match: str=None, op_name=None, mode="a", check=None):
         op_name = self.op_name if op_name is None else op_name
 
         self.logger.info(f"_post_xml('{url}', {op_name})")
@@ -168,9 +172,20 @@ class Jazz:
                     f.write(f"{data if data is not None else json}\n")
                     f.write(f"-->\n")
 
-        return response
+        if check is not None:
+            check(response)
 
-    def _put_xml(self, url, data=None, if_match: str=None, op_name=None, mode="a"):
+        response.raw.decode_content = True
+        root = etree.fromstring(response.text)
+        # -- Set local namespace mapping from the source document
+        self.namespace = root.nsmap
+        # -- Preserve ETag header
+        if 'ETag' in response.headers:
+            root.attrib['ETag'] = response.headers['ETag']
+
+        return root
+
+    def _put_xml(self, url, data=None, if_match: str=None, op_name=None, mode="a", check=None):
         op_name = self.op_name if op_name is None else op_name
 
         self.logger.info(f"_put_xml('{url}', {op_name})")
@@ -215,7 +230,18 @@ class Jazz:
                     f.write(f"{data}\n")
                     f.write(f"-->\n")
 
-        return response
+        if check is not None:
+            check(response)
+
+        response.raw.decode_content = True
+        root = etree.fromstring(response.text)
+        # -- Set local namespace mapping from the source document
+        self.namespace = root.nsmap
+        # -- Preserve ETag header
+        if 'ETag' in response.headers:
+            root.attrib['ETag'] = response.headers['ETag']
+
+        return root
 
     def _add_from_xml(self, result: dict, element, tag: str=None, path: str=None, namespaces: dict=None, func=None):
         # todo: if the target already has an entry, convert to a list of entries. (Note, it might already be a list!)
@@ -344,11 +370,17 @@ class Jazz:
                 </rdf:Description>
             </rdf:RDF>
         '''
-        response = self._post_xml(folder_creation_factory, op_name=op_name, data=xml)
+        response = None
+
+        def get_response(resp):
+            response = resp
+
+        xml_response = self._post_xml(folder_creation_factory, op_name=op_name, data=xml)
+
         if response.status_code not in (201):
             raise PermissionError(f"Unable to create folder '{folder_name}', result status {response.status_code}")
 
-        return response.headers['location']
+        return Folder(xml_root=xml_response)
 
     def delete_folder(self, folder: str):
         raise Exception("Not Yet Implemented")
@@ -424,9 +456,17 @@ class Jazz:
             """
         requirement_creation_factory = self.get_requirement_factory()
         # _post_xml actually receives the returned content for the requested resource.
-        response = self._post_xml(requirement_creation_factory, op_name=op_name, data=xml)
-        uri = response.headers['location']
-        return uri
+        response = None
+
+        def get_response(resp):
+            response = resp
+
+        xml_response = self._post_xml(requirement_creation_factory, op_name=op_name, data=xml, check=get_response())
+
+        if response.status_code not in (201):
+            raise PermissionError(f"Unable to create requirement '{name}', result status {response.status_code}")
+
+        return RequirementRequest(xml_root=xml_response)
 
 
     def get_folder_name(self, folder: str, op_name=None) -> str:
