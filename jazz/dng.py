@@ -234,12 +234,17 @@ class Jazz:
             check(response)
 
         response.raw.decode_content = True
-        root = etree.fromstring(response.text)
-        # -- Set local namespace mapping from the source document
-        self.namespace = root.nsmap
-        # -- Preserve ETag header
-        if 'ETag' in response.headers:
-            root.attrib['ETag'] = response.headers['ETag']
+        root = None
+        try:
+            root = etree.fromstring(response.text)
+            # -- Set local namespace mapping from the source document
+            self.namespace = root.nsmap
+            # -- Preserve ETag header
+            if 'ETag' in response.headers:
+                root.attrib['ETag'] = response.headers['ETag']
+        except Exception as e:
+            # Didn't get back any valid XML...
+            pass
 
         return root
 
@@ -335,7 +340,9 @@ class Jazz:
         root_folder_xpath = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
         root_path_uri = folder_result_xml.xpath(root_folder_xpath, namespaces=Jazz.xpath_namespace())[0]
 
-        return root_path_uri
+        # TODO: Return folder instead of URI
+        from .artifacts import Folder
+        return Folder(self, folder_uri=root_path_uri)
 
     def create_folder(self, name: str=None, parent_folder: str=None, op_name: str=None) -> object:
         self.logger.info(f"create_folder('{name}')")
@@ -366,7 +373,7 @@ class Jazz:
                 <rdf:Description rdf:nodeID="A0">
                     <rdf:type rdf:resource="http://jazz.net/ns/rm/navigation#folder"/>
                     <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string">{name}</dcterms:title>
-                    <nav:parent rdf:resource="{parent_folder}"/>
+                    <nav:parent rdf:resource="{parent_folder.artifact_uri}"/>
                 </rdf:Description>
             </rdf:RDF>
         '''
@@ -429,10 +436,13 @@ class Jazz:
 
         return shape_uri
 
-    def create_requirement(self, name: str=None, description: str=None, parent_folder_URI: str=None,
+    def create_requirement(self, name: str=None, description: str=None, parent_folder: object=None,
                            resource_type: str="http://open-services.net/ns/rm#Requirement",
                            op_name: str=None) -> object:
-        self.logger.info(f"create_requirement('{parent_folder_URI}')")
+        # fixme: HACK
+        from .artifacts import RequirementRequest
+
+        self.logger.info(f"create_requirement('{parent_folder.artifact_uri}')")
         factory_root = self.get_service_provider_root()
         resource_shapes_roots = self.get_shapes_nodes(resource_type=resource_type)
         shape_uri = self.get_shape_url(shape_type=self.jazz_config['requirement_shape'])
@@ -453,7 +463,7 @@ class Jazz:
                     <dc:description rdf:parseType="Literal">{description if description is not None else ''}</dc:description>
                     <dc:title rdf:parseType="Literal">{name}</dc:title>
                     <oslc:instanceShape rdf:resource="{shape_uri}"/>
-                    <nav:parent rdf:resource="{parent_folder_URI if parent_folder_URI is not None else ''}"/>
+                    <nav:parent rdf:resource="{parent_folder.artifact_uri if parent_folder is not None else ''}"/>
                 </rdf:Description>
             </rdf:RDF>
             """
@@ -470,13 +480,11 @@ class Jazz:
         if response.status_code not in [201]:
             raise PermissionError(f"Unable to create requirement '{name}', result status {response.status_code}")
 
-        # fixme: HACK
-        from .artifacts import RequirementRequest
         return RequirementRequest(self, xml_root=xml_response)
 
-
-    def get_folder_name(self, folder: str, op_name=None) -> str:
-        folder_xml = self._get_xml(folder, op_name=op_name)
+    def get_folder_name(self, folder: object, op_name=None) -> str:
+        # -- Want to see what DNG thinks the name is. Could also just get it from folder.title...
+        folder_xml = self._get_xml(folder.artifact_uri, op_name=op_name)
         node = folder_xml.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
         return node[0]
 

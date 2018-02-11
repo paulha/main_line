@@ -176,8 +176,8 @@ class TestCreateFolder(JazzTest):
                              "get service provider URL")
 
         def test_02_get_root_folder(self):
-            root = self.jazz.discover_root_folder()
-            root_name = self.jazz.get_folder_name(root)
+            root_folder = self.jazz.discover_root_folder()
+            root_name = self.jazz.get_folder_name(root_folder)
             self.assertEqual("root",
                              root_name,
                              "discover root folder")
@@ -187,7 +187,10 @@ class TestCreateFolder(JazzTest):
             parent = self.jazz.create_folder(PARENT_DELETE_ME)
             self.assertEqual(PARENT_DELETE_ME,
                              self.jazz.get_folder_name(parent),
-                             "create a folder")
+                             "DNG doesn't agree about folder name")
+            self.assertEqual(PARENT_DELETE_ME,
+                             parent.title,
+                             "Folder disagrees about it's name")
 
         def test_04_create_nested_folder(self):
             PARENT_NESTED_FOLDER = "parent_nested_folder"
@@ -199,11 +202,11 @@ class TestCreateFolder(JazzTest):
                              "create a child folder")
 
         def test_05_create_resource(self):
-            uri = self.jazz.create_requirement(name="My Test Resource", description="Here is some description!",
-                                                    parent_folder_URI=self.jazz.discover_root_folder())
+            created = self.jazz.create_requirement(name="My Test Resource", description="Here is some description!",
+                                                    parent_folder=self.jazz.discover_root_folder())
 
             # At this point, the resource has been created but we have to read it to have a local copy...
-            created = RequirementRequest(self.jazz, artifact_uri=uri)
+            # created = RequirementRequest(self.jazz, artifact_uri=uri)
             created.get()
             s = etree.tostring(created.xml_root)
             return

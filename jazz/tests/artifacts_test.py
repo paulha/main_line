@@ -65,9 +65,8 @@ class RequirementTestCases(JazzTest):
 class FolderTestcases(JazzTest):
     if 'FolderTestcases' not in jazz.jazz_config:
         def test_01_read_folder(self):
-            root_folder_uri = self.jazz.discover_root_folder()
             root_folder = Folder(self.jazz, op_name='FolderTestcases')
-            result = root_folder.read(root_folder_uri)
+            result = root_folder.read(root_folder.artifact_uri)
             self.assertEqual(root_folder, result, "Call to read() did not return self")
             pass
 
@@ -125,7 +124,7 @@ class ResourceUpdateTestCases(JazzTest):
             found_resources = fs_finder.get_folder_artifacts(search_path)
             self.assertGreater(len(found_resources['Requirements']), 0, "Should find at least one requirement...")
 
-            requirement = RequirementRequest(self.jazz, found_resources['Requirements'][0], op_name='ResourceUpdateTestCases')
+            requirement = RequirementRequest(self.jazz, artifact_uri=found_resources['Requirements'][0], op_name='ResourceUpdateTestCases')
             requirement.get()
 
             # -- This is the HARD way...
@@ -137,7 +136,7 @@ class ResourceUpdateTestCases(JazzTest):
             description_node[0].text = assigned_text
             response = requirement.put()
 
-            result_requirement = RequirementRequest(self.jazz, found_resources['Requirements'][0],
+            result_requirement = RequirementRequest(self.jazz, artifact_uri=found_resources['Requirements'][0],
                                                     op_name='ResourceUpdateTestCases')
             result_requirement.get()
             # -- This is the HARD way...
@@ -155,7 +154,7 @@ class ResourceUpdateTestCases(JazzTest):
             found_resources = fs_finder.get_folder_artifacts(search_path)
             self.assertGreater(len(found_resources['Requirements']), 0, "Should find at least one requirement...")
 
-            requirement = RequirementCollection(self.jazz, found_resources['RequirementCollections'][0],
+            requirement = RequirementCollection(self.jazz, artifact_uri=found_resources['RequirementCollections'][0],
                                                 op_name='ResourceUpdateTestCases')
             requirement.get()
 
@@ -168,7 +167,7 @@ class ResourceUpdateTestCases(JazzTest):
             description_node[0].text = assigned_text
             response = requirement.put()
 
-            result_requirement = RequirementCollection(self.jazz, found_resources['RequirementCollections'][0],
+            result_requirement = RequirementCollection(self.jazz, artifact_uri=found_resources['RequirementCollections'][0],
                                                        op_name='ResourceUpdateTestCases')
             result_requirement.get()
             # -- This is the HARD way...
