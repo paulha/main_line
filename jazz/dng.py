@@ -48,9 +48,9 @@ class Jazz:
 
     def get_xpath_string(self):
         return ", ".join([f"{name}=<{uri}>" for name, uri in Jazz.xpath_namespace().items()])
-
     
     def __init__(self, server_alias=None, config_path=None, namespace=None, op_name=XML_LOG_FILE, log=log):
+        self.root_folder = None
         self.jazz_session = requests.Session()
         self.logger = log.logger
         self.namespace = namespace
@@ -331,70 +331,6 @@ class Jazz:
 
         return self._query_base
 
-    def discover_root_folder(self, op_name=None):
-        folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
-        folder_query_uri = self.get_service_provider_root().xpath(folder_query_xpath, namespaces=Jazz.xpath_namespace())[0]
-
-        folder_result_xml = self._get_xml(folder_query_uri, op_name=op_name)
-
-        root_folder_xpath = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
-        root_path_uri = folder_result_xml.xpath(root_folder_xpath, namespaces=Jazz.xpath_namespace())[0]
-
-        # TODO: Return folder instead of URI
-        from .artifacts import Folder
-        return Folder(self, folder_uri=root_path_uri)
-
-    def create_folder(self, name: str=None, parent_folder: str=None, op_name: str=None) -> object:
-        self.logger.info(f"create_folder('{name}')")
-
-        service_provider_url = self.get_service_provider()
-
-        # Get the Project ID String
-        project_id= re.split('/', service_provider_url)[-2]
-
-        if name is None:
-            name = "OSLC Created";
-
-        if parent_folder is None:
-            parent_folder = self.discover_root_folder()
-
-        target_project = "?projectURL=" + self.jazz_config['host'] + self.jazz_config['instance'] + "/process/project-areas/" + project_id
-        folder_creation_factory = self.jazz_config['host'] + self.jazz_config['instance'] + "/folders" + target_project;
-
-        xml = f'''
-            <rdf:RDF
-                    xmlns:nav="http://jazz.net/ns/rm/navigation#" 
-                    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-                    xmlns:oslc_rm="http://open-services.net/ns/rm#"
-                    xmlns:oslc="http://open-services.net/ns/core#"
-                    xmlns:rmTypes="http://www.ibm.com/xmlns/rdm/types/"
-                    xmlns:dcterms="http://purl.org/dc/terms/"
-                    xmlns:rm="http://jazz.net/ns/rm#">
-                <rdf:Description rdf:nodeID="A0">
-                    <rdf:type rdf:resource="http://jazz.net/ns/rm/navigation#folder"/>
-                    <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string">{name}</dcterms:title>
-                    <nav:parent rdf:resource="{parent_folder.artifact_uri}"/>
-                </rdf:Description>
-            </rdf:RDF>
-        '''
-        response = None
-
-        def get_response(resp):
-            nonlocal response
-            response = resp
-
-        xml_response = self._post_xml(folder_creation_factory, op_name=op_name, data=xml, check=get_response)
-
-        if response.status_code not in [201]:
-            raise PermissionError(f"Unable to create folder '{folder_name}', result status {response.status_code}")
-
-        # fixme: HACK
-        from .artifacts import Folder
-        return Folder(self, xml_root=xml_response)
-
-    def delete_folder(self, folder: str):
-        raise Exception("Not Yet Implemented")
-
     def get_requirement_factory(self, resource_type: str="http://open-services.net/ns/rm#Requirement") -> str:
         self.logger.info(f"get_create_factory()")
         if resource_type not in self._requirement_factory:
@@ -435,58 +371,6 @@ class Jazz:
             raise Exception(f"Did not find {shape_type} in defined shapes for {resource_type}")
 
         return shape_uri
-
-    def create_requirement(self, name: str=None, description: str=None, parent_folder: object=None,
-                           resource_type: str="http://open-services.net/ns/rm#Requirement",
-                           op_name: str=None) -> object:
-        # fixme: HACK
-        from .artifacts import RequirementRequest
-
-        self.logger.info(f"create_requirement('{parent_folder.artifact_uri}')")
-        factory_root = self.get_service_provider_root()
-        resource_shapes_roots = self.get_shapes_nodes(resource_type=resource_type)
-        shape_uri = self.get_shape_url(shape_type=self.jazz_config['requirement_shape'])
-        requirement_root = self._get_xml(shape_uri, op_name=op_name)
-        shape_text = etree.tostring(self.get_shape_node_root(shape_type=self.jazz_config['requirement_shape'], resource_type=resource_type))
-        names = [value for value in self.get_shape_node_root(shape_type=self.jazz_config['requirement_shape'], resource_type=resource_type)
-                 .xpath('//oslc:name/text()', namespaces=Jazz.xpath_namespace())]
-
-        xml = f"""
-            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/terms/"
-                     xmlns:public_rm_10="http://www.ibm.com/xmlns/rm/public/1.0/"
-                     xmlns:calm="http://jazz.net/xmlns/prod/jazz/calm/1.0/" xmlns:rm="http://www.ibm.com/xmlns/rdm/rdf/"
-                     xmlns:acp="http://jazz.net/ns/acp#" xmlns:rm_property="https://grarrc.ibm.com:9443/rm/types/"
-                     xmlns:oslc="http://open-services.net/ns/core#" xmlns:nav="http://jazz.net/ns/rm/navigation#"
-                     xmlns:oslc_rm="http://open-services.net/ns/rm#">
-                <rdf:Description rdf:about="">
-                    <rdf:type rdf:resource="http://open-services.net/ns/rm#Requirement"/>
-                    <dc:description rdf:parseType="Literal">{description if description is not None else ''}</dc:description>
-                    <dc:title rdf:parseType="Literal">{name}</dc:title>
-                    <oslc:instanceShape rdf:resource="{shape_uri}"/>
-                    <nav:parent rdf:resource="{parent_folder.artifact_uri if parent_folder is not None else ''}"/>
-                </rdf:Description>
-            </rdf:RDF>
-            """
-        requirement_creation_factory = self.get_requirement_factory()
-        # _post_xml actually receives the returned content for the requested resource.
-        response = None
-
-        def get_response(resp):
-            nonlocal response
-            response = resp
-
-        xml_response = self._post_xml(requirement_creation_factory, op_name=op_name, data=xml, check=get_response)
-
-        if response.status_code not in [201]:
-            raise PermissionError(f"Unable to create requirement '{name}', result status {response.status_code}")
-
-        return RequirementRequest(self, xml_root=xml_response)
-
-    def get_folder_name(self, folder: object, op_name=None) -> str:
-        # -- Want to see what DNG thinks the name is. Could also just get it from folder.title...
-        folder_xml = self._get_xml(folder.artifact_uri, op_name=op_name)
-        node = folder_xml.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
-        return node[0]
 
     # -----------------------------------------------------------------------------------------------------------------
 

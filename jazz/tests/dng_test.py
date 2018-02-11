@@ -1,7 +1,7 @@
 import unittest
 
 from jazz.dng import Jazz, JAZZ_CONFIG_PATH
-from jazz.artifacts import Folder, RequirementRequest, RequirementCollection
+from jazz.artifacts import Folder, Requirement, RequirementCollection
 import urllib3
 import utility_funcs.logger_yaml as log
 
@@ -167,49 +167,6 @@ class TestQueryWhere(JazzTest):
 
             result = self.jazz.read(query_result['RequirementCollections'][0])
             pass
-
-class TestCreateFolder(JazzTest):
-    if 'TestCreateFolder' not in jazz.jazz_config:
-        def test_01_get_service_provider(self):
-            self.assertEqual(SERVICE_PROVIDER_URL,
-                             self.jazz.get_service_provider(),
-                             "get service provider URL")
-
-        def test_02_get_root_folder(self):
-            root_folder = self.jazz.discover_root_folder()
-            root_name = self.jazz.get_folder_name(root_folder)
-            self.assertEqual("root",
-                             root_name,
-                             "discover root folder")
-
-        def test_03_create_folder(self):
-            PARENT_DELETE_ME = "parent_delete_me"
-            parent = self.jazz.create_folder(PARENT_DELETE_ME)
-            self.assertEqual(PARENT_DELETE_ME,
-                             self.jazz.get_folder_name(parent),
-                             "DNG doesn't agree about folder name")
-            self.assertEqual(PARENT_DELETE_ME,
-                             parent.title,
-                             "Folder disagrees about it's name")
-
-        def test_04_create_nested_folder(self):
-            PARENT_NESTED_FOLDER = "parent_nested_folder"
-            CHILD_FOLDER = "child_folder"
-            parent = self.jazz.create_folder(PARENT_NESTED_FOLDER)
-            child = self.jazz.create_folder(CHILD_FOLDER, parent_folder=parent)
-            self.assertEqual(CHILD_FOLDER,
-                             self.jazz.get_folder_name(child),
-                             "create a child folder")
-
-        def test_05_create_resource(self):
-            created = self.jazz.create_requirement(name="My Test Resource", description="Here is some description!",
-                                                    parent_folder=self.jazz.discover_root_folder())
-
-            # At this point, the resource has been created but we have to read it to have a local copy...
-            # created = RequirementRequest(self.jazz, artifact_uri=uri)
-            created.get()
-            s = etree.tostring(created.xml_root)
-            return
 
 
 if __name__ == '__main__':

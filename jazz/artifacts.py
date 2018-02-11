@@ -184,7 +184,7 @@ class RequirementCollection(DNGRequest):
             self[key] = kwargs[key]
 
 
-class RequirementRequest(DNGRequest):
+class Requirement(DNGRequest):
     """
     <oslc_rm:Requirement rdf:about="https://rtc-sbox.intel.com/rrc/resources/_d6-AwwhLEeit3bw9wrTg3Q">
         <rt:_ySe9YXNnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:01:25.882Z</rt:_ySe9YXNnEeecjP8b5e9Miw>
@@ -218,6 +218,45 @@ class RequirementRequest(DNGRequest):
         for key in kwargs:
             self[key] = kwargs[key]
 
+    @classmethod
+    def create_requirement(cls, client: Jazz, name: str=None, description: str=None, parent_folder: object=None,
+                           resource_type: str="http://open-services.net/ns/rm#Requirement",
+                           op_name: str=None) -> object:
+        client.logger.info(f"create_requirement('{parent_folder.artifact_uri}')")
+        shape_uri = client.get_shape_url(shape_type=client.jazz_config['requirement_shape'])
+        xml = f"""
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/terms/"
+                     xmlns:public_rm_10="http://www.ibm.com/xmlns/rm/public/1.0/"
+                     xmlns:calm="http://jazz.net/xmlns/prod/jazz/calm/1.0/" xmlns:rm="http://www.ibm.com/xmlns/rdm/rdf/"
+                     xmlns:acp="http://jazz.net/ns/acp#" xmlns:rm_property="https://grarrc.ibm.com:9443/rm/types/"
+                     xmlns:oslc="http://open-services.net/ns/core#" xmlns:nav="http://jazz.net/ns/rm/navigation#"
+                     xmlns:oslc_rm="http://open-services.net/ns/rm#">
+                <rdf:Description rdf:about="">
+                    <rdf:type rdf:resource="http://open-services.net/ns/rm#Requirement"/>
+                    <dc:description rdf:parseType="Literal">{description if description is not None else ''}</dc:description>
+                    <dc:title rdf:parseType="Literal">{name}</dc:title>
+                    <oslc:instanceShape rdf:resource="{shape_uri}"/>
+                    <nav:parent rdf:resource="{parent_folder.artifact_uri if parent_folder is not None else ''}"/>
+                </rdf:Description>
+            </rdf:RDF>
+            """
+        requirement_creation_factory = client.get_requirement_factory()
+
+        # _post_xml actually receives the returned content for the requested resource.
+        response = None
+
+        def get_response(resp):
+            nonlocal response
+            response = resp
+
+        xml_response = client._post_xml(requirement_creation_factory, op_name=op_name, data=xml, check=get_response)
+
+        if response.status_code not in [201]:
+            raise PermissionError(f"Unable to create Requirement '{name}', result status {response.status_code}")
+
+        return Requirement(client, xml_root=xml_response)
+
+
 class Folder(DNGRequest):
     """
     <nav:folder rdf:about="https://jazz.net/sandbox01-rm/folders/_IAr-IfJ7EeejvrGNyS30YA">
@@ -230,6 +269,8 @@ class Folder(DNGRequest):
     </nav:folder>
 
     """
+    root_folder = None
+
     def __init__(self, jazz_client: object, folder_uri: str=None,
                  title: str = None, description: str=None, parent: str=None, xml_root=None, op_name: str=None):
         super().__init__(jazz_client, title=title, description=description, parent=parent, xml_root=xml_root, op_name=op_name)
@@ -316,6 +357,10 @@ class Folder(DNGRequest):
         # -- If we come out here, at least one match was found.
         return last_result
 
+    def get_folder_name(self, op_name=None) -> str:
+        node = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
+        return node[0]
+
     def get_folder_artifacts(self, path: str=None) -> list:
         path = path if path is not None else ""
         parent_folder_uri = self.get_matching_folder_uri(path)
@@ -325,3 +370,67 @@ class Folder(DNGRequest):
         # Yes! It works! :-)
         return artifacts
 
+    def delete_folder(self):
+        raise Exception("Not Yet Implemented")
+
+    @classmethod
+    def get_root_folder(cls, client: Jazz, op_name=None):
+        if client.root_folder is None:
+            folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
+            folder_query_uri = client.get_service_provider_root().xpath(folder_query_xpath, namespaces=Jazz.xpath_namespace())[0]
+
+            folder_result_xml = client._get_xml(folder_query_uri, op_name=op_name)
+
+            root_folder_xpath = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
+            root_path_uri = folder_result_xml.xpath(root_folder_xpath, namespaces=Jazz.xpath_namespace())[0]
+            client.root_folder = Folder(client, folder_uri=root_path_uri)
+
+        # TODO: Return folder instead of URI
+        return client.root_folder
+
+    @classmethod
+    def create_folder(cls, client: Jazz, name: str=None, parent_folder: str=None, op_name: str=None) -> object:
+        client.logger.info(f"create_folder('{name}')")
+
+        service_provider_url = client.get_service_provider()
+
+        # Get the Project ID String
+        project_id= re.split('/', service_provider_url)[-2]
+
+        if name is None:
+            name = "OSLC Created";
+
+        if parent_folder is None:
+            parent_folder = Folder.get_root_folder(client)
+
+        target_project = "?projectURL=" + client.jazz_config['host'] + client.jazz_config['instance'] + "/process/project-areas/" + project_id
+        folder_creation_factory = client.jazz_config['host'] + client.jazz_config['instance'] + "/folders" + target_project;
+
+        xml = f'''
+            <rdf:RDF
+                    xmlns:nav="http://jazz.net/ns/rm/navigation#" 
+                    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                    xmlns:oslc_rm="http://open-services.net/ns/rm#"
+                    xmlns:oslc="http://open-services.net/ns/core#"
+                    xmlns:rmTypes="http://www.ibm.com/xmlns/rdm/types/"
+                    xmlns:dcterms="http://purl.org/dc/terms/"
+                    xmlns:rm="http://jazz.net/ns/rm#">
+                <rdf:Description rdf:nodeID="A0">
+                    <rdf:type rdf:resource="http://jazz.net/ns/rm/navigation#folder"/>
+                    <dcterms:title rdf:datatype="http://www.w3.org/2001/XMLSchema#string">{name}</dcterms:title>
+                    <nav:parent rdf:resource="{parent_folder.artifact_uri}"/>
+                </rdf:Description>
+            </rdf:RDF>
+        '''
+        response = None
+
+        def get_response(resp):
+            nonlocal response
+            response = resp
+
+        xml_response = client._post_xml(folder_creation_factory, op_name=op_name, data=xml, check=get_response)
+
+        if response.status_code not in [201]:
+            raise PermissionError(f"Unable to create folder '{folder_name}', result status {response.status_code}")
+
+        return Folder(client, xml_root=xml_response)

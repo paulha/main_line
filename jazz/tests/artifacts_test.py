@@ -1,7 +1,7 @@
 import unittest
 from lxml import etree
-from .dng_test import JazzTest, jazz
-from jazz.artifacts import RequirementRequest, RequirementCollection, Folder
+from .dng_test import JazzTest, jazz, SERVICE_PROVIDER_URL
+from jazz.artifacts import Requirement, RequirementCollection, Folder
 from jazz.dng import Jazz
 
 sample = """
@@ -34,9 +34,9 @@ sample = """
 class RequirementTestCases(JazzTest):
     if 'RequirementTestCases' not in jazz.jazz_config:
         def test_01_requirement_get(self):
-            r = RequirementRequest(self.jazz, artifact_uri='artifact', instance_shape='shape', parent='parent',
-                                   property_uri='property', description="This is some description",
-                                   op_name='RequirementTestCases')
+            r = Requirement(self.jazz, artifact_uri='artifact', instance_shape='shape', parent='parent',
+                            property_uri='property', description="This is some description",
+                            op_name='RequirementTestCases')
             self.assertEqual(r.artifact_uri, 'artifact')
             self.assertEqual(r.property_uri, 'property')
             self.assertEqual(r.instanceShape, 'shape')
@@ -44,8 +44,8 @@ class RequirementTestCases(JazzTest):
             self.assertEqual(r['description'], 'This is some description')
 
         def test_02_requirement_set(self):
-            r = RequirementRequest(self.jazz, artifact_uri='artifact', property_uri='property', instance_shape='shape',
-                                   parent='parent', op_name='RequirementTestCases')
+            r = Requirement(self.jazz, artifact_uri='artifact', property_uri='property', instance_shape='shape',
+                            parent='parent', op_name='RequirementTestCases')
             r.property_url = 'property'
             r.instance_shape = 'shape'
             r.parent_folder = 'parent'
@@ -58,8 +58,8 @@ class RequirementTestCases(JazzTest):
 
         def test_03_requirement_read(self):
             root = etree.fromstring(sample)
-            r = RequirementRequest(self.jazz, artifact_uri='property', instance_shape='shape',
-                                   parent='parent', op_name='RequirementTestCases')
+            r = Requirement(self.jazz, artifact_uri='property', instance_shape='shape',
+                            parent='parent', op_name='RequirementTestCases')
             r.initialize_from_xml(root)
 
 class FolderTestcases(JazzTest):
@@ -124,7 +124,7 @@ class ResourceUpdateTestCases(JazzTest):
             found_resources = fs_finder.get_folder_artifacts(search_path)
             self.assertGreater(len(found_resources['Requirements']), 0, "Should find at least one requirement...")
 
-            requirement = RequirementRequest(self.jazz, artifact_uri=found_resources['Requirements'][0], op_name='ResourceUpdateTestCases')
+            requirement = Requirement(self.jazz, artifact_uri=found_resources['Requirements'][0], op_name='ResourceUpdateTestCases')
             requirement.get()
 
             # -- This is the HARD way...
@@ -136,8 +136,8 @@ class ResourceUpdateTestCases(JazzTest):
             description_node[0].text = assigned_text
             response = requirement.put()
 
-            result_requirement = RequirementRequest(self.jazz, artifact_uri=found_resources['Requirements'][0],
-                                                    op_name='ResourceUpdateTestCases')
+            result_requirement = Requirement(self.jazz, artifact_uri=found_resources['Requirements'][0],
+                                             op_name='ResourceUpdateTestCases')
             result_requirement.get()
             # -- This is the HARD way...
             result_description_node = result_requirement.xml_root.xpath("//dcterms:description", namespaces=Jazz.xpath_namespace())
@@ -180,5 +180,53 @@ class ResourceUpdateTestCases(JazzTest):
             pass
 
 
+class TestCreateFolder(JazzTest):
+    if 'TestCreateFolder' not in jazz.jazz_config:
+        def test_01_get_service_provider(self):
+            self.assertEqual(SERVICE_PROVIDER_URL,
+                             self.jazz.get_service_provider(),
+                             "get service provider URL")
+
+        def test_02_get_root_folder(self):
+            root_folder = Folder.get_root_folder(self.jazz)
+            root_name = root_folder.get_folder_name()
+            self.assertEqual("root",
+                             root_name,
+                             "discover root folder")
+
+        def test_03_create_folder(self):
+            PARENT_DELETE_ME = "parent_delete_me"
+            parent = Folder.create_folder(self.jazz, PARENT_DELETE_ME)
+            self.assertEqual(PARENT_DELETE_ME,
+                             parent.get_folder_name(),
+                             "DNG doesn't agree about folder name")
+            self.assertEqual(PARENT_DELETE_ME,
+                             parent.title,
+                             "Folder disagrees about it's name")
+
+        def test_04_create_nested_folder(self):
+            PARENT_NESTED_FOLDER = "parent_nested_folder"
+            CHILD_FOLDER = "child_folder"
+            parent = Folder.create_folder(self.jazz, PARENT_NESTED_FOLDER)
+            child = Folder.create_folder(self.jazz, CHILD_FOLDER, parent_folder=parent)
+            self.assertEqual(CHILD_FOLDER,
+                             child.get_folder_name(),
+                             "create a child folder")
+
+        def test_05_create_resource(self):
+            created = Requirement.create_requirement(self.jazz,
+                                                     name="My Test Resource",
+                                                     description="Here is some description!",
+                                                     parent_folder=Folder.get_root_folder(self.jazz))
+
+            # At this point, the resource has been created but we have to read it to have a local copy...
+            # created = RequirementRequest(self.jazz, artifact_uri=uri)
+            created.get()
+            s = etree.tostring(created.xml_root)
+            return
+
+
 if __name__ == '__main__':
     unittest.main()
+
+
