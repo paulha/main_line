@@ -269,6 +269,23 @@ class Folder(DNGRequest):
     </nav:folder>
 
     """
+    """
+    On subfolders:
+    
+    -   Initially, a folder is created with no subfolder list, implying that it gets created somehow...
+    
+    -   Subfolders are added to and removed from the current subfolder list to create and delete subfolders.
+    
+    -   Creating a folder that names /this/ folder as a parent would be what creates the subfolder list, no?
+        So no separate add operation is required. I suppose updating a folder after changing/nulling the 
+        folder's parent link would have the effect of deleting the item as a subfolder. If an item has no
+        "valid" parent, what is its status? 
+        
+        Need to investigate...
+    
+    -   Does this same logic apply to Requirements?
+    
+    """
     root_folder = None
 
     def __init__(self, jazz_client: object, folder_uri: str=None,
@@ -371,7 +388,7 @@ class Folder(DNGRequest):
         return artifacts
 
     def delete_folder(self):
-        raise Exception("Not Yet Implemented")
+        raise Exception("delete_folder() Not Yet Implemented")
 
     @classmethod
     def get_root_folder(cls, client: Jazz, op_name=None):
