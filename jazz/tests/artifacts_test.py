@@ -212,7 +212,7 @@ class TestCreateFolder(JazzTest):
 
             # At this point, the resource has been created but we have to read it to have a local copy...
             # created = RequirementRequest(self.jazz, artifact_uri=uri)
-            created.get()
+            created.get(created)
             s = etree.tostring(created.xml_root)
             return
 

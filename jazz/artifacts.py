@@ -165,7 +165,8 @@ class DNGRequest:
         </{calling_class.get_resource_tag()}>
         </rdf:RDF> 
         """
-        # text = etree.tostring(self.xml_root, pretty_print=True)
+        compare = etree.tostring(self.xml_root, pretty_print=True)
+        log.logger.info(f'FOR COMPARISON:\n{compare}')
         etag = self.xml_root.attrib['ETag'] if 'ETag' in self.xml_root.attrib else None
         del self.xml_root.attrib['ETag']
         log.logger.info(f"About to put {text}")
@@ -282,7 +283,7 @@ class Requirement(DNGRequest):
             self[key] = kwargs[key]
 
     def get_resource_tag(self):
-        return "oslc_rm:Requirement"
+        return "oslc_rm:Description"
 
     def get_body_as_xml_text(self):
         super_text = super().get_body_as_xml_text()
@@ -306,6 +307,7 @@ class Requirement(DNGRequest):
         <rt:_yQ2lunNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
         <rt:_yX1-h3NnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:01:25.882Z</rt:_yX1-h3NnEeecjP8b5e9Miw>
         <rt:_yUH8KXNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+-->
 
         """
         return text
