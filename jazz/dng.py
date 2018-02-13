@@ -286,8 +286,7 @@ class Jazz:
     def get_root_services(self):
         self.logger.info(f"get_root_services()")
         if self._root_services is None:
-            self._root_services = self._get_xml(f"{self.jazz_config['host']}{self.jazz_config['instance']}/rootservices",
-                                                XML_LOG_FILE)
+            self._root_services = self._get_xml(f"{self.jazz_config['host']}{self.jazz_config['instance']}/rootservices")
         return self._root_services
 
     def get_root_services_catalogs(self):
@@ -302,7 +301,7 @@ class Jazz:
         self.logger.info(f"get_service_provider('{project}')")
         if self._service_provider is None:
             catalog_url = self.get_root_services_catalogs()[0]
-            project_xml_tree = self._get_xml(catalog_url, XML_LOG_FILE)
+            project_xml_tree = self._get_xml(catalog_url)
             self._service_provider = project_xml_tree.xpath("//oslc:ServiceProvider[dcterms:title='"
                                                             + project + "']/./@rdf:about",
                                                             namespaces=self.namespace)[0]

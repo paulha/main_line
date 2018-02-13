@@ -62,10 +62,10 @@ class RequirementTestCases(JazzTest):
                             parent='parent', op_name='RequirementTestCases')
             r.initialize_from_xml(root)
 
-class FolderTestcases(JazzTest):
+class FolderTestCases(JazzTest):
     if 'FolderTestcases' not in jazz.jazz_config:
         def test_01_read_folder(self):
-            root_folder = Folder(self.jazz, op_name='FolderTestcases')
+            root_folder = Folder(self.jazz, op_name='FolderTestCases')
             result = root_folder.read(root_folder.artifact_uri)
             self.assertEqual(root_folder, result, "Call to read() did not return self")
             pass
@@ -125,25 +125,19 @@ class ResourceUpdateTestCases(JazzTest):
             self.assertGreater(len(found_resources['Requirements']), 0, "Should find at least one requirement...")
 
             requirement = Requirement(self.jazz, artifact_uri=found_resources['Requirements'][0], op_name='ResourceUpdateTestCases')
-            requirement.get()
+            requirement.get(requirement)
 
-            # -- This is the HARD way...
-            description_node = requirement.xml_root.xpath("//dcterms:description", namespaces=Jazz.xpath_namespace())
-            if len(description_node)==0:
-                raise Exception("Could not find Description node.")
-            text = description_node[0].text+"\n" if description_node[0].text is not None else ""
+            text = requirement.description + "\n" if requirement.description is not None else ""
             assigned_text = text + "This is a new line."
-            description_node[0].text = assigned_text
-            response = requirement.put()
+            requirement.description = assigned_text
+
+            response = requirement.put(requirement)
 
             result_requirement = Requirement(self.jazz, artifact_uri=found_resources['Requirements'][0],
                                              op_name='ResourceUpdateTestCases')
-            result_requirement.get()
-            # -- This is the HARD way...
-            result_description_node = result_requirement.xml_root.xpath("//dcterms:description", namespaces=Jazz.xpath_namespace())
-            if len(result_description_node)==0:
-                raise Exception("Could not find Result Description node.")
-            found_text = result_description_node[0].text if result_description_node[0].text is not None else ""
+            result_requirement.get(result_requirement)
+
+            found_text = result_requirement.description if result_requirement.description is not None else ""
 
             self.assertEqual(assigned_text, found_text, 'Description from updated and re-read nodes should be equal')
             pass
@@ -152,29 +146,25 @@ class ResourceUpdateTestCases(JazzTest):
             search_path = self.jazz.jazz_config['DIRECTORY_2']
             fs_finder = Folder(self.jazz, op_name='FindResourcesTestCases')
             found_resources = fs_finder.get_folder_artifacts(search_path)
-            self.assertGreater(len(found_resources['Requirements']), 0, "Should find at least one requirement...")
+            self.assertGreater(len(found_resources['RequirementCollections']), 0, "Should find at least one Requirement Collection...")
 
             requirement = RequirementCollection(self.jazz, artifact_uri=found_resources['RequirementCollections'][0],
                                                 op_name='ResourceUpdateTestCases')
-            requirement.get()
+            requirement.get(requirement)
 
-            # -- This is the HARD way...
-            description_node = requirement.xml_root.xpath("//dcterms:description", namespaces=Jazz.xpath_namespace())
-            if len(description_node)==0:
-                raise Exception("Could not find Description node.")
-            text = description_node[0].text+"\n" if description_node[0].text is not None else ""
+            requirement.get(requirement)
+
+            text = requirement.description + "\n" if requirement.description is not None else ""
             assigned_text = text + "This is a new line."
-            description_node[0].text = assigned_text
-            response = requirement.put()
+            requirement.description = assigned_text
+
+            response = requirement.put(requirement)
 
             result_requirement = RequirementCollection(self.jazz, artifact_uri=found_resources['RequirementCollections'][0],
                                                        op_name='ResourceUpdateTestCases')
-            result_requirement.get()
-            # -- This is the HARD way...
-            result_description_node = result_requirement.xml_root.xpath("//dcterms:description", namespaces=Jazz.xpath_namespace())
-            if len(result_description_node)==0:
-                raise Exception("Could not find Result Description node.")
-            found_text = result_description_node[0].text if result_description_node[0].text is not None else ""
+            result_requirement.get(result_requirement)
+
+            found_text = result_requirement.description if result_requirement.description is not None else ""
 
             self.assertEqual(assigned_text, found_text, 'Description from updated and re-read collections should be equal')
             pass
@@ -188,7 +178,7 @@ class TestCreateFolder(JazzTest):
                              "get service provider URL")
 
         def test_02_get_root_folder(self):
-            root_folder = Folder.get_root_folder(self.jazz)
+            root_folder = Folder.get_root_folder(self.jazz, op_name='TestCreateFolder')
             root_name = root_folder.get_folder_name()
             self.assertEqual("root",
                              root_name,
@@ -196,7 +186,7 @@ class TestCreateFolder(JazzTest):
 
         def test_03_create_folder(self):
             PARENT_DELETE_ME = "parent_delete_me"
-            parent = Folder.create_folder(self.jazz, PARENT_DELETE_ME)
+            parent = Folder.create_folder(self.jazz, PARENT_DELETE_ME, op_name='TestCreateFolder')
             self.assertEqual(PARENT_DELETE_ME,
                              parent.get_folder_name(),
                              "DNG doesn't agree about folder name")
@@ -207,7 +197,7 @@ class TestCreateFolder(JazzTest):
         def test_04_create_nested_folder(self):
             PARENT_NESTED_FOLDER = "parent_nested_folder"
             CHILD_FOLDER = "child_folder"
-            parent = Folder.create_folder(self.jazz, PARENT_NESTED_FOLDER)
+            parent = Folder.create_folder(self.jazz, PARENT_NESTED_FOLDER, op_name='TestCreateFolder')
             child = Folder.create_folder(self.jazz, CHILD_FOLDER, parent_folder=parent)
             self.assertEqual(CHILD_FOLDER,
                              child.get_folder_name(),
@@ -217,7 +207,8 @@ class TestCreateFolder(JazzTest):
             created = Requirement.create_requirement(self.jazz,
                                                      name="My Test Resource",
                                                      description="Here is some description!",
-                                                     parent_folder=Folder.get_root_folder(self.jazz))
+                                                     parent_folder=Folder.get_root_folder(self.jazz),
+                                                     op_name = 'TestCreateFolder')
 
             # At this point, the resource has been created but we have to read it to have a local copy...
             # created = RequirementRequest(self.jazz, artifact_uri=uri)

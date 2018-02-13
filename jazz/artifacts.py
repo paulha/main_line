@@ -39,7 +39,7 @@ class DNGRequest:
 
     def xpath_get_item(self, xpath, func=lambda x: x[0] if len(x) > 0 else None):
         element = self.xml_root.xpath(xpath, namespaces=Jazz.xpath_namespace())
-        return func(element)
+        return func(element) if func is not None else element
 
     def init_from_xml_root(self):
         # -- Is there a way to get this without programming every field?
@@ -122,30 +122,65 @@ class DNGRequest:
 
         raise LookupError(f"Unknown field name: {key}")
 
-    def get(self) -> object:
+    def get(self, calling_class) -> object:
         """Make a request to the server to please read get this thing..."""
         if self.artifact_uri is None:
             raise Exception("artifact_uri is not set")
 
         self.xml_root = self.jazz_client._get_xml(self.artifact_uri, op_name=self.op_name)
+        calling_class.init_from_xml_root()
         return self
 
-    def put(self) -> object:
+    def get_resource_tag(self):
+        return "rdf:DNGRequest"     # This is actually an invalid tag...
+
+    def get_body_as_xml_text(self):
+        text = f"""
+        <dcterms:title>{self.title if self.title is not None else ''}</dcterms:title>
+        <dcterms:description>{self.description if self.description is not None else ''}</dcterms:description>
+        <nav:parent rdf:resource="{self.parent if self.parent is not None else ''}"/>
+        """
+        return text
+
+    def put(self, calling_class) -> object:
         def check_response(response):
             # log.logger.info(f"Result was {response}")
             if response.status_code >= 400 and response.status_code <= 499:
                 raise Exception(f"Result was {response}. Couldn't put artifact.")
             pass
-
-        text = etree.tostring(self.xml_root, pretty_print=True)
+        # FIXME: Need to format XML string according to the data in the object...
+        preamble = """"""
+        text = f"""
+        <rdf:RDF xmlns:nav="http://jazz.net/ns/rm/navigation#" xmlns:rm_property="https://rtc-sbox.intel.com/rrc/types/"
+         xmlns:acp="http://jazz.net/ns/acp#" xmlns:oslc_rm="http://open-services.net/ns/rm#"
+         xmlns:oslc="http://open-services.net/ns/core#" xmlns:oslc_config="http://open-services.net/ns/config#"
+         xmlns:oslc_auto="http://open-services.net/ns/auto#" xmlns:dc="http://purl.org/dc/elements/1.1/"
+         xmlns:process="http://jazz.net/ns/process#" xmlns:jazz_rm="http://jazz.net/ns/rm#"
+         xmlns:calm="http://jazz.net/xmlns/prod/jazz/calm/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rm="http://www.ibm.com/xmlns/rdm/rdf/" xmlns:public_rm_10="http://www.ibm.com/xmlns/rm/public/1.0/"
+         xmlns:dng_task="http://jazz.net/ns/rm/dng/task#" xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:acc="http://open-services.net/ns/core/acc#">
+        <{calling_class.get_resource_tag()} rdf:about="{calling_class.artifact_uri if calling_class.artifact_uri is not None else ''}">
+            {calling_class.get_body_as_xml_text()}
+        </{calling_class.get_resource_tag()}>
+        </rdf:RDF> 
+        """
+        # text = etree.tostring(self.xml_root, pretty_print=True)
         etag = self.xml_root.attrib['ETag'] if 'ETag' in self.xml_root.attrib else None
         del self.xml_root.attrib['ETag']
         log.logger.info(f"About to put {text}")
-        self.xml_root = self.jazz_client._put_xml(self.artifact_uri,
+        new_xml_root = self.jazz_client._put_xml(self.artifact_uri,
                                                   data=text,
                                                   if_match=etag,
                                                   op_name=self.op_name,
                                                   check=check_response)
+        # FIXME: We get back the updated object, that data needs to be read into local state.
+        if new_xml_root is None:
+            raise Exception("Invalid XML response from server")
+        else:
+            self.xml_root = new_xml_root
+
+        self.init_from_xml_root()   # Will this use the correct method or the local one...?
 
         return self
 
@@ -183,6 +218,34 @@ class RequirementCollection(DNGRequest):
         for key in kwargs:
             self[key] = kwargs[key]
 
+    def get_resource_tag(self):
+        return "oslc_rm:RequirementCollection"
+
+    def get_body_as_xml_text(self):
+        super_text = super().get_body_as_xml_text()
+        text = f"""
+        {super_text}
+
+<!--
+        <dcterms:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">244084</dcterms:identifier>
+        <rmTypes:ArtifactFormat rdf:resource="https://rtc-sbox.intel.com/rrc/types/_yBhwT3NnEeecjP8b5e9Miw#Collection"/>
+        <oslc:instanceShape rdf:resource="https://rtc-sbox.intel.com/rrc/types/_GeAbgnNoEeecjP8b5e9Miw"/>
+
+        <dcterms:contributor rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        <dcterms:creator rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        <dcterms:created rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:02:50.624Z</dcterms:created>
+        <dcterms:modified rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:02:50.624Z</dcterms:modified>
+
+        <f1:accessControl rdf:resource="https://rtc-sbox.intel.com/rrc/accessControl/_xf5p4XNnEeecjP8b5e9Miw"/>
+
+        <rt:_ySe9YXNnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:02:50.624Z</rt:_ySe9YXNnEeecjP8b5e9Miw>
+        <rt:_yQ2lunNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        <rt:_yX1-h3NnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:02:50.624Z</rt:_yX1-h3NnEeecjP8b5e9Miw>
+        <rt:_yUH8KXNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+-->     
+        """
+        return text
+
 
 class Requirement(DNGRequest):
     """
@@ -217,6 +280,35 @@ class Requirement(DNGRequest):
 
         for key in kwargs:
             self[key] = kwargs[key]
+
+    def get_resource_tag(self):
+        return "oslc_rm:Requirement"
+
+    def get_body_as_xml_text(self):
+        super_text = super().get_body_as_xml_text()
+        text = f"""
+        {super_text}
+<!--
+        <dcterms:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">244083</dcterms:identifier>
+        <rmTypes:ArtifactFormat rdf:resource="https://rtc-sbox.intel.com/rrc/types/_yBhwT3NnEeecjP8b5e9Miw#Text"/>
+        <oslc:instanceShape rdf:resource="https://rtc-sbox.intel.com/rrc/types/_DyURUXNoEeecjP8b5e9Miw"/>
+
+        <jazz_rm:primaryText>PFH -- An Initial Requirement to play with</jazz_rm:primaryText>
+
+        <dcterms:contributor rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        <dcterms:creator rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        <dcterms:created rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:01:25.882Z</dcterms:created>
+        <dcterms:modified rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:01:25.882Z</dcterms:modified>
+
+        <f1:accessControl rdf:resource="https://rtc-sbox.intel.com/rrc/accessControl/_xf5p4XNnEeecjP8b5e9Miw"/>
+
+        <rt:_ySe9YXNnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:01:25.882Z</rt:_ySe9YXNnEeecjP8b5e9Miw>
+        <rt:_yQ2lunNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        <rt:_yX1-h3NnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:01:25.882Z</rt:_yX1-h3NnEeecjP8b5e9Miw>
+        <rt:_yUH8KXNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+
+        """
+        return text
 
     @classmethod
     def create_requirement(cls, client: Jazz, name: str=None, description: str=None, parent_folder: object=None,
@@ -321,6 +413,19 @@ class Folder(DNGRequest):
         self.init_from_xml_root()
         return self
 
+    def get_resource_tag(self):
+        return "nav:folder"
+
+    def get_body_as_xml_text(self):
+        super_text = super().get_body_as_xml_text()
+        text = f"""
+        {super_text}
+        <oslc_config:component rdf:resource="https://jazz.net/sandbox01-rm/cm/component/_H_NXcPJ7EeejvrGNyS30YA"/>
+        <oslc:serviceProvider rdf:resource="https://jazz.net/sandbox01-rm/oslc_rm/_H6U3cPJ7EeejvrGNyS30YA/services.xml" />
+
+        """
+        return text
+
     def get_root_folder_uri(self, op_name: str=None) -> str:
         folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
         folder_query_uri = self.jazz_client.get_service_provider_root().xpath(folder_query_xpath,
@@ -388,7 +493,8 @@ class Folder(DNGRequest):
         return artifacts
 
     def delete_folder(self):
-        raise Exception("delete_folder() Not Yet Implemented")
+        self.parent = None
+        self.put(self)
 
     @classmethod
     def get_root_folder(cls, client: Jazz, op_name=None):
