@@ -166,22 +166,27 @@ class Jazz:
                 f.write(f"<!-- {op_name if op_name is not None else '-->'} response: {response.status_code} -->\n")
                 f.write(f"<!-- {op_name if op_name is not None else '-->'} cookies:  {response.cookies} -->\n")
                 f.write(f"<!-- {op_name if op_name is not None else '-->'} headers:  {response.headers} -->\n")
-                f.write(response.text+"\n")
                 if data is not None or json is not None:
                     f.write(f"<!--\n")
                     f.write(f"{data if data is not None else json}\n")
                     f.write(f"-->\n")
+                f.write(response.text+"\n")
 
         if check is not None:
             check(response)
 
         response.raw.decode_content = True
-        root = etree.fromstring(response.text)
-        # -- Set local namespace mapping from the source document
-        self.namespace = root.nsmap
-        # -- Preserve ETag header
-        if 'ETag' in response.headers:
-            root.attrib['ETag'] = response.headers['ETag']
+        root = None
+        try:
+            root = etree.fromstring(response.text)
+            # -- Set local namespace mapping from the source document
+            self.namespace = root.nsmap
+            # -- Preserve ETag header
+            if 'ETag' in response.headers:
+                root.attrib['ETag'] = response.headers['ETag']
+        except Exception as e:
+            # Didn't get back any valid XML...
+            pass
 
         return root
 

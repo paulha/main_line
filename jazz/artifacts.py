@@ -128,29 +128,31 @@ class DNGRequest:
             raise Exception("artifact_uri is not set")
 
         self.xml_root = self.jazz_client._get_xml(self.artifact_uri, op_name=self.op_name)
-        calling_class.init_from_xml_root()
+        self.init_from_xml_root()
         return self
 
     def get_resource_tag(self):
         return "rdf:DNGRequest"     # This is actually an invalid tag...
 
     def get_body_as_xml_text(self):
+        # super_text = super().get_body_as_xml_text()
         text = f"""
+        <!-- DNGRequest -->
         <dcterms:title>{self.title if self.title is not None else ''}</dcterms:title>
         <dcterms:description>{self.description if self.description is not None else ''}</dcterms:description>
         <nav:parent rdf:resource="{self.parent if self.parent is not None else ''}"/>
         """
         return text
 
+    def update_xml_root(self):
+        self.xpath_get_item("//dcterms:title").text = self.title if self.title is not None else ""
+        self.xpath_get_item("//dcterms:description").text = self.description if self.description is not None else ''
+        self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
+
     def put(self, calling_class) -> object:
-        def check_response(response):
-            # log.logger.info(f"Result was {response}")
-            if response.status_code >= 400 and response.status_code <= 499:
-                raise Exception(f"Result was {response}. Couldn't put artifact.")
-            pass
         # FIXME: Need to format XML string according to the data in the object...
-        preamble = """"""
         text = f"""
+        <!-- DNGRequest -->
         <rdf:RDF xmlns:nav="http://jazz.net/ns/rm/navigation#" xmlns:rm_property="https://rtc-sbox.intel.com/rrc/types/"
          xmlns:acp="http://jazz.net/ns/acp#" xmlns:oslc_rm="http://open-services.net/ns/rm#"
          xmlns:oslc="http://open-services.net/ns/core#" xmlns:oslc_config="http://open-services.net/ns/config#"
@@ -160,16 +162,23 @@ class DNGRequest:
          xmlns:rm="http://www.ibm.com/xmlns/rdm/rdf/" xmlns:public_rm_10="http://www.ibm.com/xmlns/rm/public/1.0/"
          xmlns:dng_task="http://jazz.net/ns/rm/dng/task#" xmlns:dcterms="http://purl.org/dc/terms/"
          xmlns:acc="http://open-services.net/ns/core/acc#">
-        <{calling_class.get_resource_tag()} rdf:about="{calling_class.artifact_uri if calling_class.artifact_uri is not None else ''}">
-            {calling_class.get_body_as_xml_text()}
-        </{calling_class.get_resource_tag()}>
+        <{self.get_resource_tag()} rdf:about="{calling_class.artifact_uri if self.artifact_uri is not None else ''}">
+            {self.get_body_as_xml_text()}
+        </{self.get_resource_tag()}>
         </rdf:RDF> 
         """
-        compare = etree.tostring(self.xml_root, pretty_print=True)
-        log.logger.info(f'FOR COMPARISON:\n{compare}')
+        self.update_xml_root()
+        text = etree.tostring(self.xml_root)
         etag = self.xml_root.attrib['ETag'] if 'ETag' in self.xml_root.attrib else None
         del self.xml_root.attrib['ETag']
         log.logger.info(f"About to put {text}")
+
+        def check_response(response):
+            # log.logger.info(f"Result was {response}")
+            if response.status_code >= 400 and response.status_code <= 499:
+                raise Exception(f"Result was {response}. Couldn't put artifact.")
+            pass
+
         new_xml_root = self.jazz_client._put_xml(self.artifact_uri,
                                                   data=text,
                                                   if_match=etag,
@@ -177,11 +186,11 @@ class DNGRequest:
                                                   check=check_response)
         # FIXME: We get back the updated object, that data needs to be read into local state.
         if new_xml_root is None:
-            raise Exception("Invalid XML response from server")
+            #raise Exception("Invalid XML response from server")
+            pass
         else:
             self.xml_root = new_xml_root
-
-        self.init_from_xml_root()   # Will this use the correct method or the local one...?
+            self.init_from_xml_root()
 
         return self
 
@@ -227,6 +236,8 @@ class RequirementCollection(DNGRequest):
         text = f"""
         {super_text}
 
+        <!-- RequirementCollection -->
+
 <!--
         <dcterms:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">244084</dcterms:identifier>
         <rmTypes:ArtifactFormat rdf:resource="https://rtc-sbox.intel.com/rrc/types/_yBhwT3NnEeecjP8b5e9Miw#Collection"/>
@@ -246,6 +257,14 @@ class RequirementCollection(DNGRequest):
 -->     
         """
         return text
+
+    def update_xml_root(self):
+        super().update_xml_root()
+
+        # FIXME: Fill in the proper values!
+        # self.xpath_get_item("//dcterms:title").text = self.title if self.title is not None else ""
+        # self.xpath_get_item("//dcterms:description").text = self.description if self.description is not None else ''
+        # self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
 
 
 class Requirement(DNGRequest):
@@ -289,6 +308,8 @@ class Requirement(DNGRequest):
         super_text = super().get_body_as_xml_text()
         text = f"""
         {super_text}
+
+        <!-- Requirement -->
 <!--
         <dcterms:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">244083</dcterms:identifier>
         <rmTypes:ArtifactFormat rdf:resource="https://rtc-sbox.intel.com/rrc/types/_yBhwT3NnEeecjP8b5e9Miw#Text"/>
@@ -311,6 +332,14 @@ class Requirement(DNGRequest):
 
         """
         return text
+
+    def update_xml_root(self):
+        super().update_xml_root()
+
+        # FIXME: Fill in the proper values!
+        # self.xpath_get_item("//dcterms:title").text = self.title if self.title is not None else ""
+        # self.xpath_get_item("//dcterms:description").text = self.description if self.description is not None else ''
+        # self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
 
     @classmethod
     def create_requirement(cls, client: Jazz, name: str=None, description: str=None, parent_folder: object=None,
@@ -422,11 +451,22 @@ class Folder(DNGRequest):
         super_text = super().get_body_as_xml_text()
         text = f"""
         {super_text}
+        
+        <!-- Folder -->
         <oslc_config:component rdf:resource="https://jazz.net/sandbox01-rm/cm/component/_H_NXcPJ7EeejvrGNyS30YA"/>
         <oslc:serviceProvider rdf:resource="https://jazz.net/sandbox01-rm/oslc_rm/_H6U3cPJ7EeejvrGNyS30YA/services.xml" />
 
         """
         return text
+
+    def update_xml_root(self):
+        super().update_xml_root()
+
+        if self.component is not None:
+            self.xpath_get_item("//oslc_config:component/@rdf:resource", func=None)[0] = self.component
+
+        if self.service_provider is not None:
+            self.xpath_get_item("//oslc:serviceProvider/@rdf:resource", func=None)[0] = self.service_provider
 
     def get_root_folder_uri(self, op_name: str=None) -> str:
         folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
@@ -558,4 +598,4 @@ class Folder(DNGRequest):
         if response.status_code not in [201]:
             raise PermissionError(f"Unable to create folder '{folder_name}', result status {response.status_code}")
 
-        return Folder(client, xml_root=xml_response)
+        return Folder(client, folder_uri=response.headers['location'])

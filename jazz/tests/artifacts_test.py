@@ -186,7 +186,7 @@ class TestCreateFolder(JazzTest):
 
         def test_03_create_folder(self):
             PARENT_DELETE_ME = "parent_delete_me"
-            parent = Folder.create_folder(self.jazz, PARENT_DELETE_ME, op_name='TestCreateFolder')
+            parent = Folder.create_folder(self.jazz, name=PARENT_DELETE_ME, op_name='TestCreateFolder')
             self.assertEqual(PARENT_DELETE_ME,
                              parent.get_folder_name(),
                              "DNG doesn't agree about folder name")
@@ -197,15 +197,16 @@ class TestCreateFolder(JazzTest):
         def test_04_create_nested_folder(self):
             PARENT_NESTED_FOLDER = "parent_nested_folder"
             CHILD_FOLDER = "child_folder"
-            parent = Folder.create_folder(self.jazz, PARENT_NESTED_FOLDER, op_name='TestCreateFolder')
-            child = Folder.create_folder(self.jazz, CHILD_FOLDER, parent_folder=parent)
+            parent = Folder.create_folder(self.jazz, name=PARENT_NESTED_FOLDER, op_name='TestCreateFolder')
+            child = Folder.create_folder(self.jazz, name=CHILD_FOLDER, parent_folder=parent)
             self.assertEqual(CHILD_FOLDER,
                              child.get_folder_name(),
                              "create a child folder")
 
         def test_05_create_resource(self):
+            name = self.jazz.jazz_config['TEST_CONTENT_1']
             created = Requirement.create_requirement(self.jazz,
-                                                     name="My Test Resource",
+                                                     name=name,
                                                      description="Here is some description!",
                                                      parent_folder=Folder.get_root_folder(self.jazz),
                                                      op_name = 'TestCreateFolder')
