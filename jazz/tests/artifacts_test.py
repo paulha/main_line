@@ -151,17 +151,17 @@ class ResourceUpdateTestCases(JazzTest):
             self.assertGreater(len(found_resources['Requirements']), 0, "Should find at least one requirement...")
 
             requirement = Requirement(self.jazz, artifact_uri=found_resources['Requirements'][0], op_name='ResourceUpdateTestCases')
-            requirement.get(requirement)
+            requirement.get()
 
             text = requirement.description + "\n" if requirement.description is not None else ""
             assigned_text = text + "This is a new line."
             requirement.description = assigned_text
 
-            response = requirement.put(requirement)
+            response = requirement.put()
 
             result_requirement = Requirement(self.jazz, artifact_uri=found_resources['Requirements'][0],
                                              op_name='ResourceUpdateTestCases')
-            result_requirement.get(result_requirement)
+            result_requirement.get()
 
             found_text = result_requirement.description if result_requirement.description is not None else ""
 
@@ -176,19 +176,19 @@ class ResourceUpdateTestCases(JazzTest):
 
             requirement = RequirementCollection(self.jazz, artifact_uri=found_resources['RequirementCollections'][0],
                                                 op_name='ResourceUpdateTestCases')
-            requirement.get(requirement)
+            requirement.get()
 
-            requirement.get(requirement)
+            requirement.get()
 
             text = requirement.description + "\n" if requirement.description is not None else ""
             assigned_text = text + "This is a new line."
             requirement.description = assigned_text
 
-            response = requirement.put(requirement)
+            response = requirement.put()
 
             result_requirement = RequirementCollection(self.jazz, artifact_uri=found_resources['RequirementCollections'][0],
                                                        op_name='ResourceUpdateTestCases')
-            result_requirement.get(result_requirement)
+            result_requirement.get()
 
             found_text = result_requirement.description if result_requirement.description is not None else ""
 
@@ -239,9 +239,25 @@ class TestCreateFolder(JazzTest):
 
             # At this point, the resource has been created but we have to read it to have a local copy...
             # created = RequirementRequest(self.jazz, artifact_uri=uri)
-            created.get(created)
+            created.get()
             s = etree.tostring(created.xml_root)
             return
+
+
+class ZendOfTesting(JazzTest):
+    def test_10_remove_parent_delete_me(self):
+        target_uri_list = Folder(self.jazz).get_uri_of_matching_folder("parent_delete_me")
+        for uri in target_uri_list:
+            folder = Folder(self.jazz, folder_uri=uri)
+            folder.delete_folder()
+            pass
+
+    def test_20_remove_parent_nested_folder(self):
+        target_uri_list = Folder(self.jazz).get_uri_of_matching_folder("parent_nested_folder")
+        for uri in target_uri_list:
+            folder = Folder(self.jazz, folder_uri=uri)
+            folder.delete_folder()
+            pass
 
 
 if __name__ == '__main__':

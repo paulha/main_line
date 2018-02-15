@@ -122,7 +122,7 @@ class DNGRequest:
 
         raise LookupError(f"Unknown field name: {key}")
 
-    def get(self, calling_class) -> object:
+    def get(self) -> object:
         """Make a request to the server to please read get this thing..."""
         if self.artifact_uri is None:
             raise Exception("artifact_uri is not set")
@@ -134,9 +134,11 @@ class DNGRequest:
     def update_xml_root(self):
         self.xpath_get_item("//dcterms:title").text = self.title if self.title is not None else ""
         self.xpath_get_item("//dcterms:description").text = self.description if self.description is not None else ''
-        self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
+        # self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
+        self.xpath_get_item("//nav:parent", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
+                                                              self.parent if self.parent is not None else '')
 
-    def put(self, calling_class) -> object:
+    def put(self) -> object:
         self.update_xml_root()
         text = etree.tostring(self.xml_root)
         etag = self.xml_root.attrib['ETag'] if 'ETag' in self.xml_root.attrib else None
@@ -160,6 +162,35 @@ class DNGRequest:
             pass
         else:
             self.xml_root = new_xml_root
+            # This is a problem, maybe.
+            self.init_from_xml_root()
+
+        return self
+
+    def delete(self) -> object:
+        self.update_xml_root()
+        text = etree.tostring(self.xml_root)
+        etag = self.xml_root.attrib['ETag'] if 'ETag' in self.xml_root.attrib else None
+        del self.xml_root.attrib['ETag']
+        log.logger.debug(f"About to delete {text}")
+
+        def check_response(response):
+            # log.logger.debug(f"Result was {response}")
+            if response.status_code >= 400 and response.status_code <= 499:
+                raise Exception(f"Result was {response}. Couldn't put artifact.")
+            pass
+
+        new_xml_root = self.jazz_client._delete_xml(self.artifact_uri,
+                                                    if_match=etag,
+                                                    op_name=self.op_name,
+                                                    check=check_response)
+        # FIXME: We get back the updated object, that data needs to be read into local state.
+        if new_xml_root is None:
+            #raise Exception("Invalid XML response from server")
+            pass
+        else:
+            self.xml_root = new_xml_root
+            # This is a problem, maybe.
             self.init_from_xml_root()
 
         return self
@@ -205,6 +236,8 @@ class RequirementCollection(DNGRequest):
         # self.xpath_get_item("//dcterms:title").text = self.title if self.title is not None else ""
         # self.xpath_get_item("//dcterms:description").text = self.description if self.description is not None else ''
         # self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
+        # self.xpath_get_item("//nav:parent", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
+        #                                                       self.parent if self.parent is not None else '')
 
 
 class Requirement(DNGRequest):
@@ -248,6 +281,8 @@ class Requirement(DNGRequest):
         # self.xpath_get_item("//dcterms:title").text = self.title if self.title is not None else ""
         # self.xpath_get_item("//dcterms:description").text = self.description if self.description is not None else ''
         # self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
+        # self.xpath_get_item("//nav:parent", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
+        #                                                       self.parent if self.parent is not None else '')
 
     @classmethod
     def create_requirement(cls, client: Jazz, name: str=None, description: str=None, parent_folder: object=None,
@@ -356,10 +391,14 @@ class Folder(DNGRequest):
         super().update_xml_root()
 
         if self.component is not None:
-            self.xpath_get_item("//oslc_config:component/@rdf:resource", func=None)[0] = self.component
+            #self.xpath_get_item("//oslc_config:component/@rdf:resource", func=None)[0] = self.component
+            self.xpath_get_item("//oslc_config:component", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
+                                                                             self.component)
 
         if self.service_provider is not None:
             self.xpath_get_item("//oslc:serviceProvider/@rdf:resource", func=None)[0] = self.service_provider
+            self.xpath_get_item("//oslc:serviceProvider", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
+                                                                            self.service_provider)
 
     def get_root_folder_uri(self, op_name: str=None) -> str:
         folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
@@ -405,7 +444,7 @@ class Folder(DNGRequest):
             # -- All the folders have been considered and added if they match. Do a shift!
             if len(next_matches_to_check)==0:
                 # -- We didn't find any matches this go around, we're done!
-                return None
+                return []
 
             last_result = result
             subfolders_to_check = next_matches_to_check
@@ -430,7 +469,7 @@ class Folder(DNGRequest):
 
     def delete_folder(self):
         self.parent = None
-        self.put(self)
+        self.delete()
 
     @classmethod
     def get_root_folder(cls, client: Jazz, op_name=None):

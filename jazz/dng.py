@@ -48,7 +48,18 @@ class Jazz:
 
     def get_xpath_string(self):
         return ", ".join([f"{name}=<{uri}>" for name, uri in Jazz.xpath_namespace().items()])
-    
+
+    def resolve_name(self, name: str):
+        ns_name = name.split(":")
+        if self.namespace is not None and ns_name[0] in self.namespace:
+            ns_name[0] = self.namespace[ns_name[0]]
+        elif ns_name[0] in self.xpath_namespace():
+            ns_name[0] = self.xpath_namespace()[ns_name[0]]
+        else:
+            raise IndexError(f"Undefined namespace: {name}")
+
+        return f"{{{ns_name[0]}}}{ns_name[1]}"
+
     def __init__(self, server_alias=None, config_path=None, namespace=None, op_name=XML_LOG_FILE, log=log):
         self.root_folder = None
         self.jazz_session = requests.Session()
@@ -234,6 +245,66 @@ class Jazz:
                     f.write(f"<!--\n")
                     f.write(f"{data}\n")
                     f.write(f"-->\n")
+
+        if check is not None:
+            check(response)
+
+        response.raw.decode_content = True
+        root = None
+        try:
+            root = etree.fromstring(response.text)
+            # -- Set local namespace mapping from the source document
+            self.namespace = root.nsmap
+            # -- Preserve ETag header
+            if 'ETag' in response.headers:
+                root.attrib['ETag'] = response.headers['ETag']
+        except Exception as e:
+            # Didn't get back any valid XML...
+            pass
+
+        return root
+
+    def _delete_xml(self, url, if_match: str=None, op_name=None, mode="a", check=None):
+        op_name = self.op_name if op_name is None else op_name
+
+        self.logger.debug(f"_delete_xml('{url}', {op_name})")
+        headers = {'OSLC-Core-Version': '2.0',
+                   'Accept': 'application/rdf+xml',
+                   "Content-Type": "application/rdf+xml"}
+        # -- add the If-Match ETag value as needed...
+        if if_match is not None:
+            headers['If-Match'] = if_match
+
+        # (Not sure stream and verify make sense on delete...)
+        response = self.jazz_session.delete(url, headers=headers, stream=True, verify=False)
+
+        if response.status_code >= 400 and response.status_code <= 499:
+            # Error 4XX:
+            logger = self.logger.error
+        elif response.status_code >= 300 and response.status_code <= 399:
+            # Warning 3XX:
+            logger = self.logger.warning
+        else:
+            # Everything else...
+            logger = self.logger.debug
+
+        logger(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
+        logger(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
+        logger(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
+        logger(f"{url}\n{response.text}\n====")
+
+        if op_name is not None:
+            if op_name not in self.reset_list:
+                local_mode = "w"
+                self.reset_list.append(op_name)
+            else:
+                local_mode = mode
+            with open(op_name + '.xml', local_mode) as f:
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} request:  DELETE {url} -->\n")
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} response: {response.status_code} -->\n")
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} cookies:  {response.cookies} -->\n")
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} headers:  {response.headers} -->\n")
+                f.write(response.text+"\n")
 
         if check is not None:
             check(response)
