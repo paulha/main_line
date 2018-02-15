@@ -66,12 +66,12 @@ class Jazz:
         self._requirement_factory = {}
         self._shapes_nodes_root = {}
 
-        self.logger.info("Start initialization")
+        self.logger.debug("Start initialization")
 
         login_response = self.login(server_alias, config_path)
 
         root_services_catalogs = self.get_root_services_catalogs()
-        self.logger.info("Initialization completed")
+        self.logger.debug("Initialization completed")
 
     def _get_text(x):
         return x[0].text if len(x) > 0 else ""
@@ -82,7 +82,7 @@ class Jazz:
     def _get_xml(self, url, op_name=None, mode="a", check=None):
         op_name = self.op_name if op_name is None else op_name
 
-        self.logger.info(f"_get_xml('{url}', {op_name})")
+        self.logger.debug(f"_get_xml('{url}', {op_name})")
         response = self.jazz_session.get(url,
                                          headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
                                          stream=True, verify=False)
@@ -130,7 +130,7 @@ class Jazz:
     def _post_xml(self, url, data=None, json=None, if_match: str=None, op_name=None, mode="a", check=None):
         op_name = self.op_name if op_name is None else op_name
 
-        self.logger.info(f"_post_xml('{url}', {op_name})")
+        self.logger.debug(f"_post_xml('{url}', {op_name})")
         headers = {'OSLC-Core-Version': '2.0',
                    'Accept': 'application/rdf+xml',
                    "Content-Type": "application/rdf+xml"}
@@ -193,7 +193,7 @@ class Jazz:
     def _put_xml(self, url, data=None, if_match: str=None, op_name=None, mode="a", check=None):
         op_name = self.op_name if op_name is None else op_name
 
-        self.logger.info(f"_put_xml('{url}', {op_name})")
+        self.logger.debug(f"_put_xml('{url}', {op_name})")
         headers = {'OSLC-Core-Version': '2.0',
                    'Accept': 'application/rdf+xml',
                    "Content-Type": "application/rdf+xml"}
@@ -289,13 +289,13 @@ class Jazz:
         return login_response
 
     def get_root_services(self):
-        self.logger.info(f"get_root_services()")
+        self.logger.debug(f"get_root_services()")
         if self._root_services is None:
             self._root_services = self._get_xml(f"{self.jazz_config['host']}{self.jazz_config['instance']}/rootservices")
         return self._root_services
 
     def get_root_services_catalogs(self):
-        self.logger.info(f"get_root_services_catalogs()")
+        self.logger.debug(f"get_root_services_catalogs()")
         if self._root_services_catalogs is None:
             self._root_services_catalogs = self.get_root_services().xpath('//oslc_rm:rmServiceProviders/@rdf:resource',
                                                                           namespaces=self.namespace)
@@ -303,7 +303,7 @@ class Jazz:
 
     def get_service_provider(self, project: str=None) -> str:
         project = project if project is not None else self.jazz_config['project']
-        self.logger.info(f"get_service_provider('{project}')")
+        self.logger.debug(f"get_service_provider('{project}')")
         if self._service_provider is None:
             catalog_url = self.get_root_services_catalogs()[0]
             project_xml_tree = self._get_xml(catalog_url)
@@ -314,14 +314,14 @@ class Jazz:
         return self._service_provider
 
     def get_service_provider_root(self):
-        self.logger.info(f"get_service_provider_root()")
+        self.logger.debug(f"get_service_provider_root()")
         if self._service_provider_root is None:
             self._service_provider_root = self._get_xml(self.get_service_provider(), op_name='service provider')
 
         return self._service_provider_root
 
     def get_creation_factory_url(self):
-        self.logger.info(f"get_creation_factory()")
+        self.logger.debug(f"get_creation_factory()")
         if self._creation_factory is None:
             creation_factory = "//oslc:creation/@rdf:resource"
             self._creation_factory = self.get_service_provider_root().xpath(creation_factory, namespaces=self.namespace)[0]
@@ -336,7 +336,7 @@ class Jazz:
         return self._query_base
 
     def get_requirement_factory(self, resource_type: str="http://open-services.net/ns/rm#Requirement") -> str:
-        self.logger.info(f"get_create_factory()")
+        self.logger.debug(f"get_create_factory()")
         if resource_type not in self._requirement_factory:
             requirement_factory_xpath = f'//oslc:CreationFactory/oslc:resourceType[@rdf:resource="{resource_type}"]/../oslc:creation/@rdf:resource'
             self._requirement_factory[resource_type] = self.get_service_provider_root().xpath(requirement_factory_xpath,
@@ -344,7 +344,7 @@ class Jazz:
         return self._requirement_factory[resource_type]
 
     def get_shapes_nodes(self, resource_type: str="http://open-services.net/ns/rm#Requirement"):
-        self.logger.info("Getting shapes info...")
+        self.logger.debug("Getting shapes info...")
         if resource_type not in self._shapes_nodes_root:
             requirement_factory_shapes_xpath = f'//oslc:CreationFactory/oslc:resourceType[@rdf:resource="{resource_type}"]/../oslc:resourceShape/@rdf:resource'
             requirement_factory_shapes = self.get_service_provider_root().xpath(requirement_factory_shapes_xpath,

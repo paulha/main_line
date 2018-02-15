@@ -74,13 +74,13 @@ class FindFolderTestCases(JazzTest):
     if 'FindFolderTestCases' not in jazz.jazz_config:
         def test_01_find_empty_path(self):
             fs_finder = Folder(self.jazz, op_name='FindFolderTestCases')
-            found = fs_finder.get_matching_folder_uri("")
+            found = fs_finder.get_uri_of_matching_folder("")
             self.assertEqual([], found, "Empty path should return None")
 
         def test_10_find_top_dir_path(self):
             search_path = self.jazz.jazz_config['DIRECTORY_1']
             fs_finder = Folder(self.jazz, op_name='FindFolderTestCases')
-            found = fs_finder.get_matching_folder_uri(search_path)
+            found = fs_finder.get_uri_of_matching_folder(search_path)
             self.assertGreater(len(found), 0, "one or more found paths")
             folders = [self.jazz._get_xml(uri, op_name='read folders') for uri in found]
             expected_name = search_path.split('/')[-1]
@@ -91,7 +91,7 @@ class FindFolderTestCases(JazzTest):
         def test_20_find_top_dir_path(self):
             search_path = self.jazz.jazz_config['DIRECTORY_2']
             fs_finder = Folder(self.jazz, op_name='FindFolderTestCases')
-            found = fs_finder.get_matching_folder_uri(search_path)
+            found = fs_finder.get_uri_of_matching_folder(search_path)
             self.assertGreater(len(found), 0, "one or more found paths")
             folders = [self.jazz._get_xml(uri, op_name='read folders') for uri in found]
             expected_name = search_path.split('/')[-1]
@@ -109,10 +109,36 @@ class FindResourcesTestCases(JazzTest):
             that have that ID as a parent.
             """
             search_path = self.jazz.jazz_config['DIRECTORY_2']
-            fs_finder = Folder(self.jazz, op_name='FindResourcesTestCases')
-            found_resources = fs_finder.get_folder_artifacts(search_path)
+            root = Folder(self.jazz, op_name='FindResourcesTestCases')
+            found_resources = root.get_folder_artifacts(path=search_path)
             self.assertEqual(3, len(found_resources['Requirements']), "Should find 3 requirements")
-            self.assertEqual(2, len(found_resources['RequirementCollections']), "Should find 3 requirements")
+            self.assertEqual(2, len(found_resources['RequirementCollections']), "Should find 2 requirements collections")
+            pass
+
+        def test_30_get_folder_requirements(self):
+            """
+            To find the resources in a folder, find the ID of the folder and then find all the resources
+            that have that ID as a parent.
+            """
+            search_path = self.jazz.jazz_config['DIRECTORY_2']
+            search_name = self.jazz.jazz_config['TEST_REQUIREMENT_1']
+            root = Folder(self.jazz, op_name='FindResourcesTestCases')
+            found_resources = root.get_folder_artifacts(path=search_path, name=search_name)
+            self.assertEqual(1, len(found_resources['Requirements']), "Should find 1 requirements")
+            self.assertNotIn('RequirementCollections', found_resources, "Should find NO requirement collection")
+            pass
+
+        def test_40_get_folder_collectiions(self):
+            """
+            To find the resources in a folder, find the ID of the folder and then find all the resources
+            that have that ID as a parent.
+            """
+            search_path = self.jazz.jazz_config['DIRECTORY_2']
+            search_name = self.jazz.jazz_config['TEST_REQUIREMENT_COLLECTION_1']
+            root = Folder(self.jazz, op_name='FindResourcesTestCases')
+            found_resources = root.get_folder_artifacts(path=search_path, name=search_name)
+            self.assertNotIn('Requirements', found_resources, "Should find NO requirements")
+            self.assertEqual(1, len(found_resources['RequirementCollections']), "Should find 1 requirement collection")
             pass
 
 
@@ -204,7 +230,7 @@ class TestCreateFolder(JazzTest):
                              "create a child folder")
 
         def test_05_create_resource(self):
-            name = self.jazz.jazz_config['TEST_CONTENT_1']
+            name = self.jazz.jazz_config['TEST_REQUIREMENT_1']
             created = Requirement.create_requirement(self.jazz,
                                                      name=name,
                                                      description="Here is some description!",

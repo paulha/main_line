@@ -24,7 +24,7 @@ SELECT_TWO = "dcterms:title,dcterms:description"
 WHERE_ALL = "*"
 WHERE_ONE = f"dcterms:identifier={TEST_RECORD_1}"
 WHERE_TWO = f"dcterms:identifier in [{TEST_RECORD_1},{TEST_RECORD_2}]"
-WHERE_ONE_COLLEECTION = f"dcterms:identifier in [{TEST_COLLECTION_1}]"
+WHERE_ONE_COLLECTION = f"dcterms:identifier in [{TEST_COLLECTION_1}]"
 
 PROJECT = 'Open Requirements Sandbox'
 
@@ -166,7 +166,7 @@ class TestQueryWhere(JazzTest):
             query_result = self.jazz.query(
                 oslc_prefix='dcterms=<http://purl.org/dc/terms/>',
                 oslc_select='*',
-                oslc_where=WHERE_ONE_COLLEECTION,
+                oslc_where=WHERE_ONE_COLLECTION,
                 op_name='TestQueryWhere'
             )
             # todo: Check that the correct fields are returned
