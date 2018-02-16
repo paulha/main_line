@@ -37,6 +37,10 @@ class DNGRequest:
         if self.xml_root is not None:
             self.init_from_xml_root()
 
+    def get_name(self, op_name=None) -> str:
+        node = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
+        return node[0]
+
     def xpath_get_item(self, xpath, func=lambda x: x[0] if len(x) > 0 else None):
         element = self.xml_root.xpath(xpath, namespaces=Jazz.xpath_namespace())
         return func(element) if func is not None else element
@@ -453,23 +457,37 @@ class Folder(DNGRequest):
         # -- If we come out here, at least one match was found.
         return last_result
 
-    def get_folder_name(self, op_name=None) -> str:
+    def get_name(self, op_name=None) -> str:
         node = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
         return node[0]
 
+    #
+    #   -- This belongs in DNGRequest (Maybe not. See below)
+    #
     def get_folder_artifacts(self, path: str=None, name: str=None) -> list:
+        """
+        FIXME: This isn't working correctly for the root folder, or for paths that start with "/"
+
+        Here's how it *should* work:
+
+        If this is a Folder, path is relative to this folder. If this is an Artifact, path is
+        ignored and name looks for peers of this Artifact.
+
+        Leading "/" is not legal.
+
+        An "empty" folder should be presumed to be the root.
+        """
         path = path if path is not None else ""
-        parent_folder_uri = self.get_uri_of_matching_folder(path=path)
+        if path == "" or path == "/":
+            parent_folder_uri = self.get_root_folder_uri()
+        else:
+            parent_folder_uri = self.get_uri_of_matching_folder(path=path)
+
         parent_list = " ".join([f"<{uri}>" for uri in parent_folder_uri])
         title_clause = f' and dcterms:title="{name}"' if name is not None else ""
         artifacts = self.jazz_client.query(oslc_where=f"nav:parent in [{parent_list}]{title_clause}",
                                            oslc_select="*")
-        # Yes! It works! :-)
         return artifacts
-
-    def delete_folder(self):
-        self.parent = None
-        self.delete()
 
     @classmethod
     def get_root_folder(cls, client: Jazz, op_name=None):

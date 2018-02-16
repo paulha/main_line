@@ -205,7 +205,7 @@ class TestCreateFolder(JazzTest):
 
         def test_02_get_root_folder(self):
             root_folder = Folder.get_root_folder(self.jazz, op_name='TestCreateFolder')
-            root_name = root_folder.get_folder_name()
+            root_name = root_folder.get_name()
             self.assertEqual("root",
                              root_name,
                              "discover root folder")
@@ -214,7 +214,7 @@ class TestCreateFolder(JazzTest):
             PARENT_DELETE_ME = "parent_delete_me"
             parent = Folder.create_folder(self.jazz, name=PARENT_DELETE_ME, op_name='TestCreateFolder')
             self.assertEqual(PARENT_DELETE_ME,
-                             parent.get_folder_name(),
+                             parent.get_name(),
                              "DNG doesn't agree about folder name")
             self.assertEqual(PARENT_DELETE_ME,
                              parent.title,
@@ -226,7 +226,7 @@ class TestCreateFolder(JazzTest):
             parent = Folder.create_folder(self.jazz, name=PARENT_NESTED_FOLDER, op_name='TestCreateFolder')
             child = Folder.create_folder(self.jazz, name=CHILD_FOLDER, parent_folder=parent)
             self.assertEqual(CHILD_FOLDER,
-                             child.get_folder_name(),
+                             child.get_name(),
                              "create a child folder")
 
         def test_05_create_resource(self):
@@ -249,14 +249,22 @@ class ZendOfTesting(JazzTest):
         target_uri_list = Folder(self.jazz).get_uri_of_matching_folder("parent_delete_me")
         for uri in target_uri_list:
             folder = Folder(self.jazz, folder_uri=uri)
-            folder.delete_folder()
+            folder.delete()
             pass
 
     def test_20_remove_parent_nested_folder(self):
         target_uri_list = Folder(self.jazz).get_uri_of_matching_folder("parent_nested_folder")
         for uri in target_uri_list:
             folder = Folder(self.jazz, folder_uri=uri)
-            folder.delete_folder()
+            folder.delete()
+            pass
+
+    def test_30_remove_parent_nested_folder(self):
+        target_uri_list = Folder(self.jazz).get_folder_artifacts(path="/", name="Test Data")
+        for uri in target_uri_list:
+            requirement = Requirement(self.jazz, folder_uri=uri)
+            name = requirement.get_name()
+            requirement.delete()
             pass
 
 
