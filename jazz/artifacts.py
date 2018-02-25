@@ -464,24 +464,30 @@ class Folder(DNGRequest):
     #
     #   -- This belongs in DNGRequest (Maybe not. See below)
     #
-    def get_folder_artifacts(self, path: str=None, name: str=None) -> list:
+    def get_folder_artifacts(self, path: str="", name: str=None) -> list:
         """
         FIXME: This isn't working correctly for the root folder, or for paths that start with "/"
 
-        Here's how it *should* work:
+        Leading "/" means "Start at root folder"
+
+        An "empty" folder should be presumed to mean "this folder".
 
         If this is a Folder, path is relative to this folder. If this is an Artifact, path is
         ignored and name looks for peers of this Artifact.
 
-        Leading "/" is not legal.
+        TODO: I think this is fixed, but it needs to be tested for these paths:
+            "/", "", "/<Folder>", "<Folder>/<Folder>", "/<Folder>/<Folder>",
+            "/<Folder>/<Folder>/", "<Folder>/<Folder>/"
 
-        An "empty" folder should be presumed to be the root.
         """
-        path = path if path is not None else ""
-        if path == "" or path == "/":
-            parent_folder_uri = self.get_root_folder_uri()
+        folder_path = path if path is not None else ""
+
+        if folder_path.startswith("/"):
+            root_folder = self.get_root_folder(self.jazz_client)
+            folder_path = path[1:]  # for debugging!
+            parent_folder_uri = root_folder.get_uri_of_matching_folder(path=path[1:])
         else:
-            parent_folder_uri = self.get_uri_of_matching_folder(path=path)
+            parent_folder_uri = self.get_uri_of_matching_folder(path=folder_path)
 
         parent_list = " ".join([f"<{uri}>" for uri in parent_folder_uri])
         title_clause = f' and dcterms:title="{name}"' if name is not None else ""
