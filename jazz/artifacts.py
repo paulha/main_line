@@ -475,6 +475,9 @@ class Folder(DNGRequest):
         If this is a Folder, path is relative to this folder. If this is an Artifact, path is
         ignored and name looks for peers of this Artifact.
 
+        NOTE:   As I read the docs, get_uri_of_matching_folder() ought to do this, but it does not.
+        FIXME:  Maybe the problem should be fixed there instead of here?
+
         TODO: I think this is fixed, but it needs to be tested for these paths:
             "/", "", "/<Folder>", "<Folder>/<Folder>", "/<Folder>/<Folder>",
             "/<Folder>/<Folder>/", "<Folder>/<Folder>/"
