@@ -449,7 +449,7 @@ class Jazz:
 
     # -----------------------------------------------------------------------------------------------------------------
 
-    def query(self, oslc_prefix=None, oslc_select=None, oslc_where=None, op_name=None):
+    def query_xml(self, oslc_prefix=None, oslc_select=None, oslc_where=None, op_name=None):
         query = self.get_query_base()
         prefix = oslc_prefix if oslc_prefix is not None \
                     else ",".join([f'{key}=<{link}>' for key, link in self.namespace.items()])
@@ -459,7 +459,10 @@ class Jazz:
         where = "&"+urlencode({'oslc.where': oslc_where}) if oslc_where is not None else ""
         query_text = f"{query}{prefix}{select}{where}"
         query_root = self._get_xml(query_text, op_name=op_name)
-        # -- Does it really make sense to do this:? Might make more sense to return the xml document 'query_root'...
+        return query_root
+
+    def query(self, oslc_prefix=None, oslc_select=None, oslc_where=None, op_name=None):
+        query_root = self.query_xml(oslc_prefix=oslc_prefix, oslc_select=oslc_select, oslc_where=oslc_where, op_name=op_name)
         query_result = {'query_text': query_text, 'query_root': query_root, 'query_result': etree.tostring(query_root)}
         self._add_from_xml(query_result, query_root, 'result', './oslc:ResponseInfo/dcterms:title', func=Jazz._get_text)
         self._add_from_xml(query_result, query_root, 'about', './rdf:Description/@rdf:about', func=Jazz._get_first)

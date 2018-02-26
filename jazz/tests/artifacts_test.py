@@ -267,6 +267,53 @@ class ZendOfTesting(JazzTest):
             requirement.delete()
             pass
 
+class FolderAndArtifactLookups(JazzTest):
+    def test_10_get_root_folder_by_name(self):
+        """Look up root folder using "/" as the name."""
+        root_folder_uri = Folder(self.jazz).get_root_folder_uri()
+        root_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/")
+        self.assertIn(root_folder_uri, root_by_name_uri, "Finding root folder by name '/' did not match uri's")
+
+    def test_20_get_root_folder_by_empty_name(self):
+        """Look up root folder using "" as the name."""
+        root_folder_uri = Folder(self.jazz).get_root_folder_uri()
+        root_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("")
+        self.assertIn(root_folder_uri, root_by_name_uri, "Finding root folder by name '' did not match uri's")
+
+    def test_30_get_About_folder_by_name(self):
+        """Look up About folder using "About" as the name."""
+        root_folder_uri = Folder(self.jazz).get_root_folder_uri()
+        about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("About")
+        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri)
+        self.assertEqual("About", about_folder.get_name(), "Did not get correct name for About folder")
+
+    def test_40_get_About_folder_by_rooted_name(self):
+        """Look up About folder using "/About" as the name."""
+        root_folder_uri = Folder(self.jazz).get_root_folder_uri()
+        about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/About")
+        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri)
+        self.assertEqual("About", about_folder.get_name(), "Did not get correct name for 'About' folder")
+
+    def test_50_get_About_User_Guide_artifacts_folder_by_rooted_name(self):
+        """Look up About folder using "/About/User Guide artifacts" as the name."""
+        root_folder_uri = Folder(self.jazz).get_root_folder_uri()
+        about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/About/User Guide artifacts")
+        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri)
+        self.assertEqual("User Guide artifacts", about_folder.get_name(),
+                         "Did not get 'User Guide artifacts' name for 'User Guide artifacts' folder")
+
+    def test_51_get_About_User_Guide_artifacts_folder_by_rooted_name(self):
+        """Look up About folder using "/About/User Guide artifacts/" as the name."""
+        root_folder_uri = Folder(self.jazz).get_root_folder_uri()
+        about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/About/User Guide artifacts/")
+        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri)
+        self.assertEqual("User Guide artifacts", about_folder.get_name(),
+                         "Did not get 'User Guide artifacts' name for 'User Guide artifacts' folder")
+
+    def test_110_get_root_artifact(self):
+        result_list = Folder(self.jazz).get_folder_artifacts(name="Test Data")
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -404,6 +404,9 @@ class Folder(DNGRequest):
             self.xpath_get_item("//oslc:serviceProvider", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
                                                                             self.service_provider)
 
+    def get_folder_uri(self):
+        return self.artifact_uri
+
     def get_root_folder_uri(self, op_name: str=None) -> str:
         folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
         folder_query_uri = self.jazz_client.get_service_provider_root().xpath(folder_query_xpath,
@@ -415,6 +418,10 @@ class Folder(DNGRequest):
 
     def get_uri_of_matching_folder(self, path: str) -> list:
         """
+        if path startswith "/" then start at root folder
+        else start in the current folder
+
+
         On entry, the initial path to the subfolder service is in self.subfolders.
 
         Eventually, if the path begins with "/", it starts at the root of the system.
@@ -422,40 +429,40 @@ class Folder(DNGRequest):
         :param path:    Desired path, separated by "/"
         :return:        Folder for path
         """
-        navigation_path = path.split("/")
-        if navigation_path[0] == '':
-            navigation_path = []
+        def get_subfolder_query(query: str):
+            return self.jazz_client._get_xml(query, op_name=self.op_name)
 
-        subfolders_to_check = []
-        subfolders_to_check.append(self.subfolders)
-        next_matches_to_check = []
-        last_result = []
+        def get_subfolder_names(query: str) -> list:
+            subfolders_root = get_subfolder_query(query)
+            subfolder_list = subfolders_root.xpath("//nav:folder", namespaces=Jazz.xpath_namespace())
+            result = {}
+            for candidate in subfolder_list:
+                name = candidate.xpath(".//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
+                sub_folders = candidate.xpath(".//nav:subfolders/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
+                about = candidate.xpath("../nav:folder/@rdf:about", namespaces=Jazz.xpath_namespace())[0]
+                result[name] = {'about': about, 'sub_folders': sub_folders}
 
-        for dir_name in navigation_path:
-            # -- Read the subfolders of the current folder, scheduling the associated subfolders if there is a match.
-            result = []
-            for folder in subfolders_to_check:
-                subfolders_root = self.jazz_client._get_xml(folder, op_name=self.op_name)
-                subfolder_root_list = subfolders_root.xpath("//nav:folder", namespaces=Jazz.xpath_namespace())
-                for candidate in subfolder_root_list:
-                    name = candidate.xpath(".//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
-                    if dir_name == name:
-                        new_group_uri = candidate.xpath(".//nav:subfolders/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
-                        about = candidate.xpath("../nav:folder/@rdf:about", namespaces=Jazz.xpath_namespace())[0]
-                        result.append(about)
-                        next_matches_to_check.append(new_group_uri)
+            return result
 
-            # -- All the folders have been considered and added if they match. Do a shift!
-            if len(next_matches_to_check)==0:
-                # -- We didn't find any matches this go around, we're done!
-                return []
+        current_folder = self
+        if path.startswith("/"):
+            current_folder = self.get_root_folder(self.jazz_client)
+            path = path[1:]
 
-            last_result = result
-            subfolders_to_check = next_matches_to_check
-            next_matches_to_check = []
+        split_path = path.split("/")
+        folder_query = current_folder.subfolders
+        about = current_folder.artifact_uri
+        while split_path and split_path[0]:
+            current_name = split_path[0]
+            split_path = split_path[1:]
+            subfolder_names = get_subfolder_names(folder_query)
+            if current_name in subfolder_names:
+                folder_query = subfolder_names[current_name]['sub_folders']
+                about = subfolder_names[current_name]['about']
+            else:
+                return None
 
-        # -- If we come out here, at least one match was found.
-        return last_result
+        return about
 
     def get_name(self, op_name=None) -> str:
         node = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
@@ -465,38 +472,13 @@ class Folder(DNGRequest):
     #   -- This belongs in DNGRequest (Maybe not. See below)
     #
     def get_folder_artifacts(self, path: str="", name: str=None) -> list:
-        """
-        FIXME: This isn't working correctly for the root folder, or for paths that start with "/"
-
-        Leading "/" means "Start at root folder"
-
-        An "empty" folder should be presumed to mean "this folder".
-
-        If this is a Folder, path is relative to this folder. If this is an Artifact, path is
-        ignored and name looks for peers of this Artifact.
-
-        NOTE:   As I read the docs, get_uri_of_matching_folder() ought to do this, but it does not.
-        FIXME:  Maybe the problem should be fixed there instead of here?
-
-        TODO: I think this is fixed, but it needs to be tested for these paths:
-            "/", "", "/<Folder>", "<Folder>/<Folder>", "/<Folder>/<Folder>",
-            "/<Folder>/<Folder>/", "<Folder>/<Folder>/"
-
-        """
-        folder_path = path if path is not None else ""
-
-        if folder_path.startswith("/"):
-            root_folder = self.get_root_folder(self.jazz_client)
-            folder_path = path[1:]  # for debugging!
-            parent_folder_uri = root_folder.get_uri_of_matching_folder(path=path[1:])
-        else:
-            parent_folder_uri = self.get_uri_of_matching_folder(path=folder_path)
+        parent_folder_uri = [self.get_uri_of_matching_folder(path=path)]
 
         parent_list = " ".join([f"<{uri}>" for uri in parent_folder_uri])
         title_clause = f' and dcterms:title="{name}"' if name is not None else ""
-        artifacts = self.jazz_client.query(oslc_where=f"nav:parent in [{parent_list}]{title_clause}",
-                                           oslc_select="*")
-        return artifacts
+        xml_artifacts = self.jazz_client.query_xml(oslc_where=f"nav:parent in [{parent_list}]{title_clause}",
+                                               oslc_select="*")
+        return xml_artifacts
 
     @classmethod
     def get_root_folder(cls, client: Jazz, op_name=None):
