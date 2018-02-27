@@ -463,7 +463,7 @@ class Jazz:
 
     def query(self, oslc_prefix=None, oslc_select=None, oslc_where=None, op_name=None):
         query_root = self.query_xml(oslc_prefix=oslc_prefix, oslc_select=oslc_select, oslc_where=oslc_where, op_name=op_name)
-        query_result = {'query_text': query_text, 'query_root': query_root, 'query_result': etree.tostring(query_root)}
+        query_result = {'query_root': query_root, 'query_result': etree.tostring(query_root)}
         self._add_from_xml(query_result, query_root, 'result', './oslc:ResponseInfo/dcterms:title', func=Jazz._get_text)
         self._add_from_xml(query_result, query_root, 'about', './rdf:Description/@rdf:about', func=Jazz._get_first)
         self._add_from_xml(query_result, query_root, 'RequirementCollections', '//oslc_rm:RequirementCollection/@rdf:about')

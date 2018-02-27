@@ -418,16 +418,8 @@ class Folder(DNGRequest):
 
     def get_uri_of_matching_folder(self, path: str) -> list:
         """
-        if path startswith "/" then start at root folder
-        else start in the current folder
+        if path startswith "/" then start at root folder else start at the current folder
 
-
-        On entry, the initial path to the subfolder service is in self.subfolders.
-
-        Eventually, if the path begins with "/", it starts at the root of the system.
-
-        :param path:    Desired path, separated by "/"
-        :return:        Folder for path
         """
         def get_subfolder_query(query: str):
             return self.jazz_client._get_xml(query, op_name=self.op_name)
@@ -475,10 +467,59 @@ class Folder(DNGRequest):
         parent_folder_uri = [self.get_uri_of_matching_folder(path=path)]
 
         parent_list = " ".join([f"<{uri}>" for uri in parent_folder_uri])
+        # fixme: by quoting name here, we lose the ability to do wildcard searches and arbitrary queries. :-(
         title_clause = f' and dcterms:title="{name}"' if name is not None else ""
+        # title_clause = f' and dcterms:title=*' if name is not None else ""
         xml_artifacts = self.jazz_client.query_xml(oslc_where=f"nav:parent in [{parent_list}]{title_clause}",
-                                               oslc_select="*")
-        return xml_artifacts
+                                                   oslc_select="*")
+        #
+        # -- It might make sense here to return more information from the query. Collections appear
+        #    to provide identical XML:
+        #
+        # ---------------------------------------------------------------------------
+        # <rdfs:member>
+        #     <oslc_rm:Requirement rdf:about="https://rtc-sbox.intel.com/rrc/resources/_iYQpMxBTEeit3bw9wrTg3Q">
+        #         <rt:_ySe9YXNnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-13T00:19:21.059Z</rt:_ySe9YXNnEeecjP8b5e9Miw>
+        #         <dcterms:description></dcterms:description>
+        #         <oslc:instanceShape rdf:resource="https://rtc-sbox.intel.com/rrc/types/_DyURUXNoEeecjP8b5e9Miw"/>
+        #         <jazz_rm:primaryText>PFH -- An Initial Requirement to play with</jazz_rm:primaryText> <!-- note: THE ONLY UNIQUE FIELD -->
+        #         <dcterms:title>Copy of Copy of Copy of Copy of PFH -- An Initial Requirement to play with</dcterms:title>
+        #         <rt:_yQ2lunNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        #         <dcterms:modified rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-13T00:19:21.059Z</dcterms:modified>
+        #         <dcterms:creator rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        #         <dcterms:created rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-13T00:19:21.059Z</dcterms:created>
+        #         <rt:_yX1-h3NnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-13T00:19:21.059Z</rt:_yX1-h3NnEeecjP8b5e9Miw>
+        #         <f1:accessControl rdf:resource="https://rtc-sbox.intel.com/rrc/accessControl/_xf5p4XNnEeecjP8b5e9Miw"/>
+        #         <nav:parent rdf:resource="https://rtc-sbox.intel.com/rrc/folders/_4p0zw_J4Eeec-bwG5--tlA"/>
+        #         <dcterms:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">247584</dcterms:identifier>
+        #         <rmTypes:ArtifactFormat rdf:resource="https://rtc-sbox.intel.com/rrc/types/_yBhwT3NnEeecjP8b5e9Miw#Text"/>
+        #         <dcterms:contributor rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        #         <rt:_yUH8KXNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        #     </oslc_rm:Requirement>
+        # </rdfs:member>
+        # <rdfs:member>
+        #     <oslc_rm:RequirementCollection rdf:about="https://rtc-sbox.intel.com/rrc/resources/_FDZykRBUEeit3bw9wrTg3Q">
+        #         <rt:_ySe9YXNnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-13T00:23:13.737Z</rt:_ySe9YXNnEeecjP8b5e9Miw>
+        #         <dcterms:description></dcterms:description>
+        #         <oslc:instanceShape rdf:resource="https://rtc-sbox.intel.com/rrc/types/_GeAbgnNoEeecjP8b5e9Miw"/>
+        #         <dcterms:title>Copy of Copy of Test Collection</dcterms:title>
+        #         <rt:_yQ2lunNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        #         <dcterms:modified rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-13T00:23:13.737Z</dcterms:modified>
+        #         <dcterms:creator rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        #         <dcterms:created rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-13T00:23:13.737Z</dcterms:created>
+        #         <rt:_yX1-h3NnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-13T00:23:13.737Z</rt:_yX1-h3NnEeecjP8b5e9Miw>
+        #         <f1:accessControl rdf:resource="https://rtc-sbox.intel.com/rrc/accessControl/_xf5p4XNnEeecjP8b5e9Miw"/>
+        #         <nav:parent rdf:resource="https://rtc-sbox.intel.com/rrc/folders/_4p0zw_J4Eeec-bwG5--tlA"/>
+        #         <dcterms:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">247588</dcterms:identifier>
+        #         <rmTypes:ArtifactFormat rdf:resource="https://rtc-sbox.intel.com/rrc/types/_yBhwT3NnEeecjP8b5e9Miw#Collection"/>
+        #         <dcterms:contributor rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        #         <rt:_yUH8KXNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+        #     </oslc_rm:RequirementCollection>
+        # </rdfs:member>
+        # ---------------------------------------------------------------------------
+        member_about = xml_artifacts.xpath("//rdfs:member/*/@rdf:about", namespaces=Jazz.xpath_namespace())
+        artifact_uris = [uri for uri in xml_artifacts.xpath("//rdfs:member/*/@rdf:about", namespaces=Jazz.xpath_namespace())]
+        return artifact_uris
 
     @classmethod
     def get_root_folder(cls, client: Jazz, op_name=None):

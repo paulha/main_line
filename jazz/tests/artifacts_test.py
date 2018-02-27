@@ -311,7 +311,13 @@ class FolderAndArtifactLookups(JazzTest):
                          "Did not get 'User Guide artifacts' name for 'User Guide artifacts' folder")
 
     def test_110_get_root_artifact(self):
-        result_list = Folder(self.jazz).get_folder_artifacts(name="Test Data")
+        result_xml = Folder(self.jazz).get_folder_artifacts()
+        # results are divided by <rdfs:member>
+        pass
+
+    def test_120_get_folder_artifacts(self):
+        result_xml = Folder(self.jazz).get_folder_artifacts(path="Z: PFH -- Test Content/subfolder or Z: PFH -- Test Content")
+        # results are divided by <rdfs:member>
         pass
 
 
