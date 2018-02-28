@@ -4,8 +4,17 @@ import re
 import utility_funcs.logger_yaml as log
 from .dng import Jazz
 
+class DNGRequest:
+    pass
 
 class DNGRequest:
+    shape_cache = {}
+    shape_to_class_mapping = {}
+
+    @classmethod
+    def map_shape_name_to_class(cls, name: str, shape_class: type):
+        cls.shape_to_class_mapping[name] = shape_class
+
     # -- Note: ETag is stored in attrib list of xml_root
     def __init__(self, jazz_client: Jazz,
                  artifact_uri: str=None, title: str = None, description: str=None, parent: str=None, xml_root=None,
@@ -131,7 +140,7 @@ class DNGRequest:
         if self.artifact_uri is None:
             raise Exception("artifact_uri is not set")
 
-        self.xml_root = self.jazz_client._get_xml(self.artifact_uri, op_name=self.op_name)
+        self.xml_root = self.jazz_client.get_xml(self.artifact_uri, op_name=self.op_name)
         self.init_from_xml_root()
         return self
 
@@ -155,11 +164,11 @@ class DNGRequest:
                 raise Exception(f"Result was {response}. Couldn't put artifact.")
             pass
 
-        new_xml_root = self.jazz_client._put_xml(self.artifact_uri,
-                                                  data=text,
-                                                  if_match=etag,
-                                                  op_name=self.op_name,
-                                                  check=check_response)
+        new_xml_root = self.jazz_client.put_xml(self.artifact_uri,
+                                                data=text,
+                                                if_match=etag,
+                                                op_name=self.op_name,
+                                                check=check_response)
         # FIXME: We get back the updated object, that data needs to be read into local state.
         if new_xml_root is None:
             #raise Exception("Invalid XML response from server")
@@ -184,10 +193,10 @@ class DNGRequest:
                 raise Exception(f"Result was {response}. Couldn't put artifact.")
             pass
 
-        new_xml_root = self.jazz_client._delete_xml(self.artifact_uri,
-                                                    if_match=etag,
-                                                    op_name=self.op_name,
-                                                    check=check_response)
+        new_xml_root = self.jazz_client.delete_xml(self.artifact_uri,
+                                                   if_match=etag,
+                                                   op_name=self.op_name,
+                                                   check=check_response)
         # FIXME: We get back the updated object, that data needs to be read into local state.
         if new_xml_root is None:
             #raise Exception("Invalid XML response from server")
@@ -198,6 +207,36 @@ class DNGRequest:
             self.init_from_xml_root()
 
         return self
+
+    def get_shape_info(self, shape_uri: str) -> {}:
+        if shape_uri not in self.shape_cache:
+            shape_xml = self.jazz_client.get_xml(shape_uri)
+            shape_name = shape_xml.xpath("//oslc:ResourceShape/dcterms:title/text()",
+                                         namespaces=self.jazz_client.xpath_namespace())[0]
+            if shape_name not in self.shape_to_class_mapping:
+                log.logger.error(f"No class mapping found for '{shape_name}'")
+
+            self.shape_cache[shape_uri] = {
+                'xml': shape_xml,
+                'name': shape_name,
+                'class': self.shape_to_class_mapping[shape_name] if shape_name in self.shape_to_class_mapping else None
+            }
+        return self.shape_cache[shape_uri]
+
+    def get_object_from_uri(self, uri, op_name=None):
+        """Return an instance of the class refered to by the XML at the uri"""
+        xml_root = self.jazz_client.get_xml(url=uri, op_name=op_name if op_name is not None else self.op_name)
+        type_uri_list = [uri for uri in xml_root.xpath("//rdf:type/@rdf:resource", namespaces=Jazz.xpath_namespace())]
+        type_root = [
+            self.jazz_client.get_xml(url=type_uri, op_name=op_name if op_name is not None else self.op_name)
+            for type_uri in type_uri_list
+        ]
+        shape_uri_list = [uri for uri in xml_root.xpath("//oslc:instanceShape/@rdf:resource", namespaces=Jazz.xpath_namespace())]
+        shape_root = [
+            self.jazz_client.get_xml(url=shape_uri, op_name=op_name if op_name is not None else self.op_name)
+            for shape_uri in shape_uri_list
+        ]
+        pass
 
 
 class RequirementCollection(DNGRequest):
@@ -242,6 +281,9 @@ class RequirementCollection(DNGRequest):
         # self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
         # self.xpath_get_item("//nav:parent", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
         #                                                       self.parent if self.parent is not None else '')
+
+
+DNGRequest.map_shape_name_to_class("Collection Release", RequirementCollection)
 
 
 class Requirement(DNGRequest):
@@ -312,19 +354,22 @@ class Requirement(DNGRequest):
             """
         requirement_creation_factory = client.get_requirement_factory()
 
-        # _post_xml actually receives the returned content for the requested resource.
+        # post_xml actually receives the returned content for the requested resource.
         response = None
 
         def get_response(resp):
             nonlocal response
             response = resp
 
-        xml_response = client._post_xml(requirement_creation_factory, op_name=op_name, data=xml, check=get_response)
+        xml_response = client.post_xml(requirement_creation_factory, op_name=op_name, data=xml, check=get_response)
 
         if response.status_code not in [201]:
             raise PermissionError(f"Unable to create Requirement '{name}', result status {response.status_code}")
 
         return Requirement(client, xml_root=xml_response)
+
+
+DNGRequest.map_shape_name_to_class("Functional Requirement", Requirement)
 
 
 class Folder(DNGRequest):
@@ -383,11 +428,11 @@ class Folder(DNGRequest):
         self.service_provider = self.xpath_get_item("//oslc:serviceProvider/@rdf:resource")
         self.subfolders = self.xpath_get_item("//nav:subfolders/@rdf:resource")
         if self.subfolders is not None:
-            self.subfolders_xml_root = self .jazz_client._get_xml(self.subfolders, op_name=self.op_name)
+            self.subfolders_xml_root = self .jazz_client.get_xml(self.subfolders, op_name=self.op_name)
 
     def read(self, folder_uri: str) -> DNGRequest:
         self.artifact_uri = folder_uri
-        self.xml_root = self.jazz_client._get_xml(self.artifact_uri, op_name=self.op_name)
+        self.xml_root = self.jazz_client.get_xml(self.artifact_uri, op_name=self.op_name)
         self.init_from_xml_root()
         return self
 
@@ -411,7 +456,7 @@ class Folder(DNGRequest):
         folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
         folder_query_uri = self.jazz_client.get_service_provider_root().xpath(folder_query_xpath,
                                                                               namespaces=Jazz.xpath_namespace())[0]
-        folder_result_xml = self.jazz_client._get_xml(folder_query_uri, op_name=op_name)
+        folder_result_xml = self.jazz_client.get_xml(folder_query_uri, op_name=op_name)
         root_path_uri = folder_result_xml.xpath("//nav:folder[dcterms:title=\"root\"]/@rdf:about",
                                                 namespaces=Jazz.xpath_namespace())[0]
         return root_path_uri
@@ -422,7 +467,7 @@ class Folder(DNGRequest):
 
         """
         def get_subfolder_query(query: str):
-            return self.jazz_client._get_xml(query, op_name=self.op_name)
+            return self.jazz_client.get_xml(query, op_name=self.op_name)
 
         def get_subfolder_names(query: str) -> list:
             subfolders_root = get_subfolder_query(query)
@@ -517,7 +562,9 @@ class Folder(DNGRequest):
         #     </oslc_rm:RequirementCollection>
         # </rdfs:member>
         # ---------------------------------------------------------------------------
-        member_about = xml_artifacts.xpath("//rdfs:member/*/@rdf:about", namespaces=Jazz.xpath_namespace())
+        n = Jazz.xpath_namespace()
+        member = xml_artifacts.xpath("//rdfs:member/*", namespaces=Jazz.xpath_namespace())
+        member_list = [etree.tostring(item) for item in member]
         artifact_uris = [uri for uri in xml_artifacts.xpath("//rdfs:member/*/@rdf:about", namespaces=Jazz.xpath_namespace())]
         return artifact_uris
 
@@ -527,7 +574,7 @@ class Folder(DNGRequest):
             folder_query_xpath = '//oslc:QueryCapability[dcterms:title="Folder Query Capability"]/oslc:queryBase/@rdf:resource'
             folder_query_uri = client.get_service_provider_root().xpath(folder_query_xpath, namespaces=Jazz.xpath_namespace())[0]
 
-            folder_result_xml = client._get_xml(folder_query_uri, op_name=op_name)
+            folder_result_xml = client.get_xml(folder_query_uri, op_name=op_name)
 
             root_folder_xpath = "//nav:folder[dcterms:title=\"root\"]/@rdf:about"
             root_path_uri = folder_result_xml.xpath(root_folder_xpath, namespaces=Jazz.xpath_namespace())[0]
@@ -576,9 +623,15 @@ class Folder(DNGRequest):
             nonlocal response
             response = resp
 
-        xml_response = client._post_xml(folder_creation_factory, op_name=op_name, data=xml, check=get_response)
+        xml_response = client.post_xml(folder_creation_factory, op_name=op_name, data=xml, check=get_response)
 
         if response.status_code not in [201]:
             raise PermissionError(f"Unable to create folder '{folder_name}', result status {response.status_code}")
 
         return Folder(client, folder_uri=response.headers['location'])
+
+
+DNGRequest.map_shape_name_to_class("xxxxxxxxxx", Folder)
+
+
+

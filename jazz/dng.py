@@ -90,10 +90,10 @@ class Jazz:
     def _get_first(x):
         return x[0] if len(x) > 0 else None
 
-    def _get_xml(self, url, op_name=None, mode="a", check=None):
+    def get_xml(self, url, op_name=None, mode="a", check=None):
         op_name = self.op_name if op_name is None else op_name
 
-        self.logger.debug(f"_get_xml('{url}', {op_name})")
+        self.logger.debug(f"get_xml('{url}', {op_name})")
         response = self.jazz_session.get(url,
                                          headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
                                          stream=True, verify=False)
@@ -138,10 +138,10 @@ class Jazz:
 
         return root
 
-    def _post_xml(self, url, data=None, json=None, if_match: str=None, op_name=None, mode="a", check=None):
+    def post_xml(self, url, data=None, json=None, if_match: str=None, op_name=None, mode="a", check=None):
         op_name = self.op_name if op_name is None else op_name
 
-        self.logger.debug(f"_post_xml('{url}', {op_name})")
+        self.logger.debug(f"post_xml('{url}', {op_name})")
         headers = {'OSLC-Core-Version': '2.0',
                    'Accept': 'application/rdf+xml',
                    "Content-Type": "application/rdf+xml"}
@@ -168,7 +168,7 @@ class Jazz:
 
         if op_name is not None:
             if op_name not in self.reset_list:
-                local_mode = "w"
+                local_mode = "wb"
                 self.reset_list.append(op_name)
             else:
                 local_mode = mode
@@ -201,10 +201,10 @@ class Jazz:
 
         return root
 
-    def _put_xml(self, url, data=None, if_match: str=None, op_name=None, mode="a", check=None):
+    def put_xml(self, url, data=None, if_match: str=None, op_name=None, mode="a", check=None):
         op_name = self.op_name if op_name is None else op_name
 
-        self.logger.debug(f"_put_xml('{url}', {op_name})")
+        self.logger.debug(f"put_xml('{url}', {op_name})")
         headers = {'OSLC-Core-Version': '2.0',
                    'Accept': 'application/rdf+xml',
                    "Content-Type": "application/rdf+xml"}
@@ -231,7 +231,7 @@ class Jazz:
 
         if op_name is not None:
             if op_name not in self.reset_list:
-                local_mode = "w"
+                local_mode = "wb"
                 self.reset_list.append(op_name)
             else:
                 local_mode = mode
@@ -264,10 +264,10 @@ class Jazz:
 
         return root
 
-    def _delete_xml(self, url, if_match: str=None, op_name=None, mode="a", check=None):
+    def delete_xml(self, url, if_match: str=None, op_name=None, mode="a", check=None):
         op_name = self.op_name if op_name is None else op_name
 
-        self.logger.debug(f"_delete_xml('{url}', {op_name})")
+        self.logger.debug(f"delete_xml('{url}', {op_name})")
         headers = {'OSLC-Core-Version': '2.0',
                    'Accept': 'application/rdf+xml',
                    "Content-Type": "application/rdf+xml"}
@@ -295,7 +295,7 @@ class Jazz:
 
         if op_name is not None:
             if op_name not in self.reset_list:
-                local_mode = "w"
+                local_mode = "wb"
                 self.reset_list.append(op_name)
             else:
                 local_mode = mode
@@ -362,7 +362,7 @@ class Jazz:
     def get_root_services(self):
         self.logger.debug(f"get_root_services()")
         if self._root_services is None:
-            self._root_services = self._get_xml(f"{self.jazz_config['host']}{self.jazz_config['instance']}/rootservices")
+            self._root_services = self.get_xml(f"{self.jazz_config['host']}{self.jazz_config['instance']}/rootservices")
         return self._root_services
 
     def get_root_services_catalogs(self):
@@ -377,7 +377,7 @@ class Jazz:
         self.logger.debug(f"get_service_provider('{project}')")
         if self._service_provider is None:
             catalog_url = self.get_root_services_catalogs()[0]
-            project_xml_tree = self._get_xml(catalog_url)
+            project_xml_tree = self.get_xml(catalog_url)
             self._service_provider = project_xml_tree.xpath("//oslc:ServiceProvider[dcterms:title='"
                                                             + project + "']/./@rdf:about",
                                                             namespaces=self.namespace)[0]
@@ -387,7 +387,7 @@ class Jazz:
     def get_service_provider_root(self):
         self.logger.debug(f"get_service_provider_root()")
         if self._service_provider_root is None:
-            self._service_provider_root = self._get_xml(self.get_service_provider(), op_name='service provider')
+            self._service_provider_root = self.get_xml(self.get_service_provider(), op_name='service provider')
 
         return self._service_provider_root
 
@@ -424,7 +424,7 @@ class Jazz:
                 resource_shape.xpath("//oslc:ResourceShape/dcterms:title/text()",
                                      namespaces=Jazz.xpath_namespace())[0]: resource_shape
                 for resource_shape in
-                [self._get_xml(shape, op_name='shapes') for shape in requirement_factory_shapes]
+                [self.get_xml(shape, op_name='shapes') for shape in requirement_factory_shapes]
             }
 
         return self._shapes_nodes_root[resource_type]
@@ -458,7 +458,7 @@ class Jazz:
         select = "&"+urlencode({'oslc.select': oslc_select}) if oslc_select is not None else ""
         where = "&"+urlencode({'oslc.where': oslc_where}) if oslc_where is not None else ""
         query_text = f"{query}{prefix}{select}{where}"
-        query_root = self._get_xml(query_text, op_name=op_name)
+        query_root = self.get_xml(query_text, op_name=op_name)
         return query_root
 
     def query(self, oslc_prefix=None, oslc_select=None, oslc_where=None, op_name=None):
@@ -471,11 +471,11 @@ class Jazz:
         return query_result
 
     def _get_resources(self, resource_list, op_name=None):
-        return [self._get_xml(resource_url, op_name=op_name, mode="a+") for resource_url in resource_list]
+        return [self.get_xml(resource_url, op_name=op_name, mode="a+") for resource_url in resource_list]
 
 
     def read(self, resource_url, op_name=None):
-        root_element = self._get_xml(resource_url, op_name=op_name, mode="a+")
+        root_element = self.get_xml(resource_url, op_name=op_name, mode="a+")
         this_item = {'Root': root_element, 'resource_url': resource_url}
         self._add_from_xml(this_item, root_element, 'about', './rdf:Description/@rdf:about')
         self._add_from_xml(this_item, root_element, 'modified', './rdf:Description/dcterms:modified', func=Jazz._get_text)

@@ -82,7 +82,7 @@ class FindFolderTestCases(JazzTest):
             fs_finder = Folder(self.jazz, op_name='FindFolderTestCases')
             found = fs_finder.get_uri_of_matching_folder(search_path)
             self.assertGreater(len(found), 0, "one or more found paths")
-            folders = [self.jazz._get_xml(uri, op_name='read folders') for uri in found]
+            folders = [self.jazz.get_xml(uri, op_name='read folders') for uri in found]
             expected_name = search_path.split('/')[-1]
             for folder in folders:
                 found_name = folder.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
@@ -93,7 +93,7 @@ class FindFolderTestCases(JazzTest):
             fs_finder = Folder(self.jazz, op_name='FindFolderTestCases')
             found = fs_finder.get_uri_of_matching_folder(search_path)
             self.assertGreater(len(found), 0, "one or more found paths")
-            folders = [self.jazz._get_xml(uri, op_name='read folders') for uri in found]
+            folders = [self.jazz.get_xml(uri, op_name='read folders') for uri in found]
             expected_name = search_path.split('/')[-1]
             for folder in folders:
                 found_name = folder.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
@@ -310,14 +310,36 @@ class FolderAndArtifactLookups(JazzTest):
         self.assertEqual("User Guide artifacts", about_folder.get_name(),
                          "Did not get 'User Guide artifacts' name for 'User Guide artifacts' folder")
 
-    def test_110_get_root_artifact(self):
-        result_xml = Folder(self.jazz).get_folder_artifacts()
+    def test_110_get_root_artifacts(self):
+        f = Folder(self.jazz)
+        result_list = f.get_folder_artifacts()
         # results are divided by <rdfs:member>
+        #for uri in result_list:
+        #    f.get_object_from_uri(uri, "GetObjectFromUri")
         pass
 
     def test_120_get_folder_artifacts(self):
-        result_xml = Folder(self.jazz).get_folder_artifacts(path="Z: PFH -- Test Content/subfolder or Z: PFH -- Test Content")
+        f = Folder(self.jazz)
+        result_list = f.get_folder_artifacts(path="Z: PFH -- Test Content/subfolder or Z: PFH -- Test Content", name="Test Collection")
         # results are divided by <rdfs:member>
+        #for uri in result_list:
+        #    f.get_object_from_uri(uri, "GetObjectFromUri")
+        xml = self.jazz.get_xml(result_list[0])
+        shape_uri = xml.xpath("//oslc:instanceShape/@rdf:resource", namespaces=self.jazz.xpath_namespace())
+        shape_xml = self.jazz.get_xml(shape_uri[0])
+        pass
+
+    def test_130_get_folder_artifacts(self):
+        f = Folder(self.jazz)
+        result_list = f.get_folder_artifacts(path="Z: PFH -- Test Content/subfolder or Z: PFH -- Test Content", name="Test Collection")
+        # results are divided by <rdfs:member>
+        #for uri in result_list:
+        #    f.get_object_from_uri(uri, "GetObjectFromUri")
+        xml = self.jazz.get_xml(result_list[0])
+        shape_uri = xml.xpath("//oslc:instanceShape/@rdf:resource", namespaces=self.jazz.xpath_namespace())
+        result = f.get_shape_info(shape_uri[0])
+        shape_xml = self.jazz.get_xml(shape_uri[0])
+        title = shape_xml.xpath("//oslc:ResourceShape/dcterms:title/text()", namespaces=self.jazz.xpath_namespace())
         pass
 
 
