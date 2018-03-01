@@ -9,7 +9,7 @@ from lxml import etree
 
 # -- Login
 urllib3.disable_warnings()
-jazz = Jazz(server_alias="sandbox", config_path=JAZZ_CONFIG_PATH)
+jazz = Jazz(server_alias="sandbox", config_path=JAZZ_CONFIG_PATH, use_cache=True)
 
 # -- DNG/One Android/Programs/Test Integration
 # TEST_RECORD_1 = 67383               # 50161

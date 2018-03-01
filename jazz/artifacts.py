@@ -8,13 +8,6 @@ class DNGRequest:
     pass
 
 class DNGRequest:
-    shape_cache = {}
-    shape_to_class_mapping = {}
-
-    @classmethod
-    def map_shape_name_to_class(cls, name: str, shape_class: type):
-        cls.shape_to_class_mapping[name] = shape_class
-
     # -- Note: ETag is stored in attrib list of xml_root
     def __init__(self, jazz_client: Jazz,
                  artifact_uri: str=None, title: str = None, description: str=None, parent: str=None, xml_root=None,
@@ -208,36 +201,6 @@ class DNGRequest:
 
         return self
 
-    def get_shape_info(self, shape_uri: str) -> {}:
-        if shape_uri not in self.shape_cache:
-            shape_xml = self.jazz_client.get_xml(shape_uri)
-            shape_name = shape_xml.xpath("//oslc:ResourceShape/dcterms:title/text()",
-                                         namespaces=self.jazz_client.xpath_namespace())[0]
-            if shape_name not in self.shape_to_class_mapping:
-                log.logger.error(f"No class mapping found for '{shape_name}'")
-
-            self.shape_cache[shape_uri] = {
-                'xml': shape_xml,
-                'name': shape_name,
-                'class': self.shape_to_class_mapping[shape_name] if shape_name in self.shape_to_class_mapping else None
-            }
-        return self.shape_cache[shape_uri]
-
-    def get_object_from_uri(self, uri, op_name=None):
-        """Return an instance of the class refered to by the XML at the uri"""
-        xml_root = self.jazz_client.get_xml(url=uri, op_name=op_name if op_name is not None else self.op_name)
-        type_uri_list = [uri for uri in xml_root.xpath("//rdf:type/@rdf:resource", namespaces=Jazz.xpath_namespace())]
-        type_root = [
-            self.jazz_client.get_xml(url=type_uri, op_name=op_name if op_name is not None else self.op_name)
-            for type_uri in type_uri_list
-        ]
-        shape_uri_list = [uri for uri in xml_root.xpath("//oslc:instanceShape/@rdf:resource", namespaces=Jazz.xpath_namespace())]
-        shape_root = [
-            self.jazz_client.get_xml(url=shape_uri, op_name=op_name if op_name is not None else self.op_name)
-            for shape_uri in shape_uri_list
-        ]
-        pass
-
 
 class RequirementCollection(DNGRequest):
     """
@@ -283,7 +246,7 @@ class RequirementCollection(DNGRequest):
         #                                                       self.parent if self.parent is not None else '')
 
 
-DNGRequest.map_shape_name_to_class("Collection Release", RequirementCollection)
+Jazz.map_shape_name_to_class("Collection Release", RequirementCollection)
 
 
 class Requirement(DNGRequest):
@@ -313,7 +276,10 @@ class Requirement(DNGRequest):
                  property_uri: str=None, op_name: str=None, **kwargs):
         super().__init__(jazz_client, artifact_uri=artifact_uri, title=title, description=description,
                          parent=parent, xml_root=xml_root,
-                         primary_list=['uri', 'title', 'identifier', 'type', 'description', 'subject', 'creator', 'modified'],
+                         primary_list=[
+                             'uri', 'title', 'identifier', 'type', 'description', 'subject',
+                             'creator', 'modified',
+                         ],
                          property_uri=property_uri, instance_shape=instance_shape,
                          resource_property_list=['primaryText'], op_name=op_name)
 
@@ -369,7 +335,7 @@ class Requirement(DNGRequest):
         return Requirement(client, xml_root=xml_response)
 
 
-DNGRequest.map_shape_name_to_class("Functional Requirement", Requirement)
+Jazz.map_shape_name_to_class("Functional Requirement", Requirement)
 
 
 class Folder(DNGRequest):
@@ -404,9 +370,11 @@ class Folder(DNGRequest):
     root_folder = None
 
     def __init__(self, jazz_client: object, folder_uri: str=None,
-                 title: str = None, description: str=None, parent: str=None, xml_root=None, op_name: str=None):
-        super().__init__(jazz_client, title=title, description=description, parent=parent, xml_root=xml_root, op_name=op_name)
-        self.artifact_uri = folder_uri
+                 title: str = None, description: str=None, parent: str=None, xml_root=None,
+                 instance_shape: str=None, op_name: str=None):
+        super().__init__(jazz_client, title=title, description=description, artifact_uri=folder_uri,
+                         parent=parent, xml_root=xml_root, op_name=op_name)
+        # self.artifact_uri = folder_uri
         self.op_name = op_name
         self.subfolders = None
         self.component = None
@@ -499,7 +467,7 @@ class Folder(DNGRequest):
             else:
                 return None
 
-        return about
+        return about if isinstance(about, list) else [about]
 
     def get_name(self, op_name=None) -> str:
         node = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
@@ -509,9 +477,9 @@ class Folder(DNGRequest):
     #   -- This belongs in DNGRequest (Maybe not. See below)
     #
     def get_folder_artifacts(self, path: str="", name: str=None) -> list:
-        parent_folder_uri = [self.get_uri_of_matching_folder(path=path)]
+        parent_folder_uri_list = self.get_uri_of_matching_folder(path=path)
 
-        parent_list = " ".join([f"<{uri}>" for uri in parent_folder_uri])
+        parent_list = " ".join([f"<{uri}>" for uri in parent_folder_uri_list])
         # fixme: by quoting name here, we lose the ability to do wildcard searches and arbitrary queries. :-(
         title_clause = f' and dcterms:title="{name}"' if name is not None else ""
         # title_clause = f' and dcterms:title=*' if name is not None else ""
@@ -630,8 +598,6 @@ class Folder(DNGRequest):
 
         return Folder(client, folder_uri=response.headers['location'])
 
-
-DNGRequest.map_shape_name_to_class("xxxxxxxxxx", Folder)
-
-
+# Note: Folder does not have an 'instanceShape'
+Jazz.map_shape_name_to_class("folder", Folder)
 

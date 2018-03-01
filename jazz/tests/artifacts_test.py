@@ -73,16 +73,18 @@ class FolderTestCases(JazzTest):
 class FindFolderTestCases(JazzTest):
     if 'FindFolderTestCases' not in jazz.jazz_config:
         def test_01_find_empty_path(self):
+            """Empty path should return root folder"""
             fs_finder = Folder(self.jazz, op_name='FindFolderTestCases')
+            root_folder = fs_finder.get_root_folder_uri()
             found = fs_finder.get_uri_of_matching_folder("")
-            self.assertEqual([], found, "Empty path should return None")
+            self.assertEqual(root_folder, found[0], "Empty path should return root")
 
         def test_10_find_top_dir_path(self):
             search_path = self.jazz.jazz_config['DIRECTORY_1']
-            fs_finder = Folder(self.jazz, op_name='FindFolderTestCases')
+            fs_finder = Folder(self.jazz)
             found = fs_finder.get_uri_of_matching_folder(search_path)
             self.assertGreater(len(found), 0, "one or more found paths")
-            folders = [self.jazz.get_xml(uri, op_name='read folders') for uri in found]
+            folders = [self.jazz.get_xml(uri) for uri in found]
             expected_name = search_path.split('/')[-1]
             for folder in folders:
                 found_name = folder.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
@@ -109,10 +111,9 @@ class FindResourcesTestCases(JazzTest):
             that have that ID as a parent.
             """
             search_path = self.jazz.jazz_config['DIRECTORY_2']
-            root = Folder(self.jazz, op_name='FindResourcesTestCases')
+            root = Folder(self.jazz)
             found_resources = root.get_folder_artifacts(path=search_path)
-            self.assertEqual(3, len(found_resources['Requirements']), "Should find 3 requirements")
-            self.assertEqual(2, len(found_resources['RequirementCollections']), "Should find 2 requirements collections")
+            self.assertGreater(3, len(found_resources), "Should find more than 3 artifacts")
             pass
 
         def test_30_get_folder_requirements(self):
@@ -262,39 +263,39 @@ class ZendOfTesting(JazzTest):
     def test_30_remove_parent_nested_folder(self):
         target_uri_list = Folder(self.jazz).get_folder_artifacts(path="/", name="Test Data")
         for uri in target_uri_list:
-            requirement = Requirement(self.jazz, folder_uri=uri)
+            requirement = Requirement(self.jazz, artifact_uri=uri)
             name = requirement.get_name()
             requirement.delete()
             pass
 
 class FolderAndArtifactLookups(JazzTest):
-    def test_10_get_root_folder_by_name(self):
+    def test_010_get_root_folder_by_name(self):
         """Look up root folder using "/" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
         root_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/")
         self.assertIn(root_folder_uri, root_by_name_uri, "Finding root folder by name '/' did not match uri's")
 
-    def test_20_get_root_folder_by_empty_name(self):
+    def test_020_get_root_folder_by_empty_name(self):
         """Look up root folder using "" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
         root_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("")
         self.assertIn(root_folder_uri, root_by_name_uri, "Finding root folder by name '' did not match uri's")
 
-    def test_30_get_About_folder_by_name(self):
+    def test_030_get_About_folder_by_name(self):
         """Look up About folder using "About" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
         about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("About")
         about_folder = Folder(self.jazz, folder_uri=about_by_name_uri)
         self.assertEqual("About", about_folder.get_name(), "Did not get correct name for About folder")
 
-    def test_40_get_About_folder_by_rooted_name(self):
+    def test_040_get_About_folder_by_rooted_name(self):
         """Look up About folder using "/About" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
         about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/About")
         about_folder = Folder(self.jazz, folder_uri=about_by_name_uri)
         self.assertEqual("About", about_folder.get_name(), "Did not get correct name for 'About' folder")
 
-    def test_50_get_About_User_Guide_artifacts_folder_by_rooted_name(self):
+    def test_050_get_About_User_Guide_artifacts_folder_by_rooted_name(self):
         """Look up About folder using "/About/User Guide artifacts" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
         about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/About/User Guide artifacts")
@@ -302,7 +303,7 @@ class FolderAndArtifactLookups(JazzTest):
         self.assertEqual("User Guide artifacts", about_folder.get_name(),
                          "Did not get 'User Guide artifacts' name for 'User Guide artifacts' folder")
 
-    def test_51_get_About_User_Guide_artifacts_folder_by_rooted_name(self):
+    def test_051_get_About_User_Guide_artifacts_folder_by_rooted_name(self):
         """Look up About folder using "/About/User Guide artifacts/" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
         about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/About/User Guide artifacts/")
@@ -331,15 +332,9 @@ class FolderAndArtifactLookups(JazzTest):
 
     def test_130_get_folder_artifacts(self):
         f = Folder(self.jazz)
-        result_list = f.get_folder_artifacts(path="Z: PFH -- Test Content/subfolder or Z: PFH -- Test Content", name="Test Collection")
-        # results are divided by <rdfs:member>
-        #for uri in result_list:
-        #    f.get_object_from_uri(uri, "GetObjectFromUri")
-        xml = self.jazz.get_xml(result_list[0])
-        shape_uri = xml.xpath("//oslc:instanceShape/@rdf:resource", namespaces=self.jazz.xpath_namespace())
-        result = f.get_shape_info(shape_uri[0])
-        shape_xml = self.jazz.get_xml(shape_uri[0])
-        title = shape_xml.xpath("//oslc:ResourceShape/dcterms:title/text()", namespaces=self.jazz.xpath_namespace())
+        result_list = f.get_folder_artifacts(path="Z: PFH -- Test Content/subfolder or Z: PFH -- Test Content")
+        objs = self.jazz.get_object_from_uri(result_list)
+        folders = self.jazz.get_object_from_uri(f.artifact_uri)
         pass
 
 

@@ -26,6 +26,7 @@ JAZZ_CONFIG_PATH = f"{dirname(realpath(sys.argv[0]))}/config.yaml{pathsep}~/.jaz
 
 XML_LOG_FILE = "Dialog"
 
+
 class Jazz:
     @classmethod
     def xpath_namespace(cls):
@@ -60,7 +61,9 @@ class Jazz:
 
         return f"{{{ns_name[0]}}}{ns_name[1]}"
 
-    def __init__(self, server_alias=None, config_path=None, namespace=None, op_name=XML_LOG_FILE, log=log):
+    def __init__(self, server_alias=None, config_path=None, namespace=None, op_name=XML_LOG_FILE, log=log, use_cache=True):
+        self.xml_cache = {}
+        self.use_cache = use_cache
         self.root_folder = None
         self.jazz_session = requests.Session()
         self.logger = log.logger
@@ -91,52 +94,58 @@ class Jazz:
         return x[0] if len(x) > 0 else None
 
     def get_xml(self, url, op_name=None, mode="a", check=None):
-        op_name = self.op_name if op_name is None else op_name
+        # -- Get the XML tree into the cache
+        if url not in self.xml_cache or not self.use_cache:
+            op_name = self.op_name if op_name is None else op_name
 
-        self.logger.debug(f"get_xml('{url}', {op_name})")
-        response = self.jazz_session.get(url,
-                                         headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
-                                         stream=True, verify=False)
-        if response.status_code >= 400 and response.status_code <= 499:
-            # Error 4XX:
-            logger = self.logger.error
-        elif response.status_code >= 300 and response.status_code <= 399:
-            # Warning 3XX:
-            logger = self.logger.warning
-        else:
-            # Everything else...
-            logger = self.logger.debug
-
-        logger(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
-        logger(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
-        logger(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
-        logger(f"{url}\n{response.text}\n====")
-
-        if op_name is not None:
-            if op_name not in self.reset_list:
-                local_mode = "w"
-                self.reset_list.append(op_name)
+            self.logger.debug(f"get_xml('{url}', {op_name})")
+            response = self.jazz_session.get(url,
+                                             headers={'OSLC-Core-Version': '2.0', 'Accept': 'application/rdf+xml'},
+                                             stream=True, verify=False)
+            if response.status_code >= 400 and response.status_code <= 499:
+                # Error 4XX:
+                logger = self.logger.error
+            elif response.status_code >= 300 and response.status_code <= 399:
+                # Warning 3XX:
+                logger = self.logger.warning
             else:
-                local_mode = mode
-            with open(op_name + '.xml', local_mode) as f:
-                f.write(f"<!-- {op_name} request:  GET {url} -->\n")
-                f.write(f"<!-- {op_name} response: {response.status_code} -->\n")
-                f.write(f"<!-- {op_name} cookies:  {response.cookies} -->\n")
-                f.write(f"<!-- {op_name} headers:  {response.headers} -->\n")
-                f.write(response.text+"\n")
+                # Everything else...
+                logger = self.logger.debug
 
-        if check is not None:
-            check(response)
+            self.logger.debug(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
+            self.logger.debug(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
+            self.logger.debug(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
+            self.logger.debug(f"{url}\n{response.text}\n====")
 
-        response.raw.decode_content = True
-        root = etree.fromstring(response.text)
-        # -- Set local namespace mapping from the source document
-        self.namespace = root.nsmap
-        # -- Preserve ETag header
-        if 'ETag' in response.headers:
-            root.attrib['ETag'] = response.headers['ETag']
+            if op_name is not None:
+                if op_name not in self.reset_list:
+                    local_mode = "w"
+                    self.reset_list.append(op_name)
+                else:
+                    local_mode = mode
+                with open(op_name + '.xml', local_mode) as f:
+                    f.write(f"<!-- {op_name} request:  GET {url} -->\n")
+                    f.write(f"<!-- {op_name} response: {response.status_code} -->\n")
+                    f.write(f"<!-- {op_name} cookies:  {response.cookies} -->\n")
+                    f.write(f"<!-- {op_name} headers:  {response.headers} -->\n")
+                    f.write(response.text+"\n")
 
-        return root
+            if check is not None:
+                check(response)
+
+            response.raw.decode_content = True
+            root = etree.fromstring(response.text)
+            # -- Set local namespace mapping from the source document
+            self.namespace = root.nsmap
+            # -- Preserve ETag header
+            if 'ETag' in response.headers:
+                root.attrib['ETag'] = response.headers['ETag']
+
+            if self.use_cache:
+                self.xml_cache[url] = root
+
+        # -- Return the value that's in the cache.
+        return self.xml_cache[url] if self.use_cache else root
 
     def post_xml(self, url, data=None, json=None, if_match: str=None, op_name=None, mode="a", check=None):
         op_name = self.op_name if op_name is None else op_name
@@ -148,6 +157,9 @@ class Jazz:
         # -- add the If-Match ETag value as needed...
         if if_match is not None:
             headers['If-Match'] = if_match
+
+        if self.use_cache and url in self.xml_cache:
+            del self.xml_cache[url]     # remove from cache to force update
 
         response = self.jazz_session.post(url, data=data, json=json, headers=headers, stream=True, verify=False)
 
@@ -161,10 +173,10 @@ class Jazz:
             # Everything else...
             logger = self.logger.debug
 
-        logger(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
-        logger(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
-        logger(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
-        logger(f"{url}\n{response.text}\n====")
+        self.logger.debug(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
+        self.logger.debug(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
+        self.logger.debug(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
+        self.logger.debug(f"{url}\n{response.text}\n====")
 
         if op_name is not None:
             if op_name not in self.reset_list:
@@ -212,6 +224,9 @@ class Jazz:
         if if_match is not None:
             headers['If-Match'] = if_match
 
+        if self.use_cache and url in self.xml_cache:
+            del self.xml_cache[url]  # remove from cache to force update
+
         response = self.jazz_session.put(url, data=data, headers=headers, stream=True, verify=False)
 
         if response.status_code >= 400 and response.status_code <= 499:
@@ -224,10 +239,10 @@ class Jazz:
             # Everything else...
             logger = self.logger.debug
 
-        logger(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
-        logger(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
-        logger(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
-        logger(f"{url}\n{response.text}\n====")
+        self.logger.debug(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
+        self.logger.debug(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
+        self.logger.debug(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
+        self.logger.debug(f"{url}\n{response.text}\n====")
 
         if op_name is not None:
             if op_name not in self.reset_list:
@@ -275,6 +290,9 @@ class Jazz:
         if if_match is not None:
             headers['If-Match'] = if_match
 
+        if self.use_cache and url in self.xml_cache:
+            del self.xml_cache[url]  # remove from cache to force update
+
         # (Not sure stream and verify make sense on delete...)
         response = self.jazz_session.delete(url, headers=headers, stream=True, verify=False)
 
@@ -288,10 +306,10 @@ class Jazz:
             # Everything else...
             logger = self.logger.debug
 
-        logger(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
-        logger(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
-        logger(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
-        logger(f"{url}\n{response.text}\n====")
+        self.logger.debug(f"{op_name if op_name is not None else '-->'} response: {response.status_code}")
+        self.logger.debug(f"{op_name if op_name is not None else '-->'} cookies: {response.cookies}")
+        self.logger.debug(f"{op_name if op_name is not None else '-->'} headers: {response.headers}")
+        self.logger.debug(f"{url}\n{response.text}\n====")
 
         if op_name is not None:
             if op_name not in self.reset_list:
@@ -500,6 +518,46 @@ class Jazz:
         # self._add_from_xml(this_item, root_element, 'rm_property:_4G6Ioa_4EeekDP1y4xXYPQ', './rdf:Description/rm_property:_4G6Ioa_4EeekDP1y4xXYPQ/@rdf:resource', func=self._get_resources)
         self.logger.debug(this_item)
         return this_item
+
+    shape_cache = {}
+    shape_to_class_mapping = {}
+
+    @classmethod
+    def map_shape_name_to_class(cls, name: str, shape_class: type):
+        cls.shape_to_class_mapping[name] = shape_class
+
+    def get_shape_info(self, shape_uri: str) -> {}:
+        if shape_uri not in self.shape_cache:
+            shape_xml = self.get_xml(shape_uri)
+            shape_name = shape_xml.xpath("//oslc:ResourceShape/dcterms:title/text()",
+                                         namespaces=self.xpath_namespace())[0]
+            if shape_name not in self.shape_to_class_mapping:
+                log.logger.error(f"No class mapping found for '{shape_name}'")
+
+            self.shape_cache[shape_uri] = {
+                'xml': shape_xml,
+                'name': shape_name,
+                'class': self.shape_to_class_mapping[shape_name] if shape_name in self.shape_to_class_mapping else None
+            }
+        return self.shape_cache[shape_uri]
+
+    def get_object_from_uri(self, uri_list, op_name=None):
+        """Return an instance of the class refered to by the XML at the uri"""
+        if not isinstance(uri_list, list):
+            uri_list = [uri_list]
+
+        artifacts = []
+        for uri in uri_list:
+            artifact_xml_root = self.get_xml(url=uri, op_name=op_name if op_name is not None else self.op_name)
+            # -- If you don't find instance shape, resort to the item type name (e.g., 'folder')
+            if artifact_xml_root.xpath("//nav:folder", namespaces=Jazz.xpath_namespace()):
+                artifacts.append(self.shape_to_class_mapping['folder'](self, xml_root=artifact_xml_root))
+            else:
+                shape_uri = artifact_xml_root.xpath("//oslc:instanceShape/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
+                shape_info = self.get_shape_info(shape_uri)
+                artifacts.append(shape_info['class'](self, instance_shape=shape_uri, xml_root=artifact_xml_root))
+
+        return artifacts
 
 
 def main():
