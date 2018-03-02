@@ -335,7 +335,7 @@ class Requirement(DNGRequest):
         return Requirement(client, xml_root=xml_response)
 
 
-Jazz.map_shape_name_to_class("Functional Requirement", Requirement)
+Jazz.map_shape_name_to_class("Default Requirement", Requirement)
 
 
 class Folder(DNGRequest):
@@ -429,6 +429,10 @@ class Folder(DNGRequest):
                                                 namespaces=Jazz.xpath_namespace())[0]
         return root_path_uri
 
+    def get_name(self, op_name=None) -> str:
+        node = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
+        return node[0]
+
     def get_uri_of_matching_folder(self, path: str) -> list:
         """
         if path startswith "/" then start at root folder else start at the current folder
@@ -468,10 +472,6 @@ class Folder(DNGRequest):
                 return None
 
         return about if isinstance(about, list) else [about]
-
-    def get_name(self, op_name=None) -> str:
-        node = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
-        return node[0]
 
     #
     #   -- This belongs in DNGRequest (Maybe not. See below)

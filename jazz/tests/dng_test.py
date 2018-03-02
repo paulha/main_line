@@ -53,8 +53,7 @@ class TestQueryPrefix(JazzTest):
             """Test with a single prefix"""
             query_result = self.jazz.query(
                 oslc_prefix='dcterms=<http://purl.org/dc/terms/>',
-                oslc_select=SELECT_TWO,
-                op_name='TestQueryPrefix'
+                oslc_select=SELECT_TWO
             )
             # todo: Check that the correct fields are returned
             self.assertIn('result', query_result, "Should have a result")
@@ -66,8 +65,7 @@ class TestQueryPrefix(JazzTest):
             """Test with two prefixes"""
             query_result = self.jazz.query(
                 oslc_prefix='dcterms=<http://purl.org/dc/terms/>,oslc_rm=<http://open-services.net/ns/rm%23>',
-                oslc_select=SELECT_TWO,
-                op_name='TestQueryPrefix'
+                oslc_select=SELECT_TWO
             )
             # todo: Check that the correct fields are returned
             self.assertIn('result', query_result, "Should have a result")
@@ -79,8 +77,7 @@ class TestQueryPrefix(JazzTest):
             """Test with many prefixes"""
             query_result = self.jazz.query(
                 oslc_prefix='rdf=<http://www.w3.org/1999/02/22-rdf-syntax-ns#>,calm=<http://jazz.net/xmlns/prod/jazz/calm/1.0>,rm=<http://www.ibm.com/xmlns/rdm/rdf/>,oslc=<http://open-services.net/ns/core#>,jp10=<http://jazz.net/xmlns/prod/jazz/process/1.0/>,oslc_config=<http://open-services.net/ns/config#>,dcterms=<http://purl.org/dc/terms/>',
-                oslc_select=SELECT_TWO,
-                op_name='TestQueryPrefix'
+                oslc_select=SELECT_TWO
             )
             # todo: Check that the correct fields are returned
             self.assertIn('result', query_result, "Should have a result")
@@ -93,8 +90,7 @@ class TestQueryPrefix(JazzTest):
             # fixme: This certainly won't work if the one above doesn't...
             self.jazz.add_namespace('dcterms', 'http://purl.org/dc/terms/')
             query_result = self.jazz.query(
-                oslc_select=SELECT_TWO,
-                op_name='TestQueryPrefix'
+                oslc_select=SELECT_TWO
             )
             # todo: Check that the correct fields are returned
             self.assertIn('result', query_result, "Should have a result")
@@ -109,8 +105,7 @@ class TestQuerySelect(JazzTest):
             """Locate dcterms:identifier=67120, no selected fields (should return all)"""
             query_result = self.jazz.query(
                 oslc_prefix='dcterms=<http://purl.org/dc/terms/>',
-                oslc_where=WHERE_ONE,
-                op_name='TestQuerySelect'
+                oslc_where=WHERE_ONE
             )
             # todo: Check that the correct fields are returned
             self.assertEqual("Query Results: 1", query_result['result'], "Should return only one record.")
@@ -121,8 +116,7 @@ class TestQuerySelect(JazzTest):
             """Locate all (no where), return only dcterms:identifier"""
             query_result = self.jazz.query(
                 oslc_prefix='dcterms=<http://purl.org/dc/terms/>',
-                oslc_select=SELECT_ONE,
-                op_name='TestQuerySelect'
+                oslc_select=SELECT_ONE
             )
             # -- todo: This test should be improved to know that it's really returning (only) the field I asked for...
             self.assertGreater(len(query_result['Requirements']), 3, "Should be many results")
@@ -133,8 +127,7 @@ class TestQuerySelect(JazzTest):
             query_result = self.jazz.query(
                 oslc_prefix='dcterms=<http://purl.org/dc/terms/>',
                 oslc_select=SELECT_ALL,
-                oslc_where=WHERE_ONE,
-                op_name='TestQuerySelect'
+                oslc_where=WHERE_ONE
             )
             # todo: Check that the correct fields are returned
             self.assertEqual("Query Results: 1", query_result['result'], "Should return only one record.")
@@ -149,8 +142,7 @@ class TestQueryWhere(JazzTest):
             query_result = self.jazz.query(
                 oslc_prefix='dcterms=<http://purl.org/dc/terms/>',
                 oslc_select='*',
-                oslc_where=WHERE_TWO,
-                op_name='TestQueryWhere'
+                oslc_where=WHERE_TWO
             )
             # todo: Check that the correct fields are returned
             self.assertEqual("Query Results: 2", query_result['result'], "Should return two records.")
@@ -166,8 +158,7 @@ class TestQueryWhere(JazzTest):
             query_result = self.jazz.query(
                 oslc_prefix='dcterms=<http://purl.org/dc/terms/>',
                 oslc_select='*',
-                oslc_where=WHERE_ONE_COLLECTION,
-                op_name='TestQueryWhere'
+                oslc_where=WHERE_ONE_COLLECTION
             )
             # todo: Check that the correct fields are returned
             self.assertEqual("Query Results: 1", query_result['result'], "Should return one records.")

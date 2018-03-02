@@ -45,7 +45,7 @@ class RequirementTestCases(JazzTest):
 
         def test_02_requirement_set(self):
             r = Requirement(self.jazz, artifact_uri='artifact', property_uri='property', instance_shape='shape',
-                            parent='parent', op_name='RequirementTestCases')
+                            parent='parent')
             r.property_url = 'property'
             r.instance_shape = 'shape'
             r.parent_folder = 'parent'
@@ -59,13 +59,13 @@ class RequirementTestCases(JazzTest):
         def test_03_requirement_read(self):
             root = etree.fromstring(sample)
             r = Requirement(self.jazz, artifact_uri='property', instance_shape='shape',
-                            parent='parent', op_name='RequirementTestCases')
+                            parent='parent')
             r.initialize_from_xml(root)
 
 class FolderTestCases(JazzTest):
     if 'FolderTestcases' not in jazz.jazz_config:
         def test_01_read_folder(self):
-            root_folder = Folder(self.jazz, op_name='FolderTestCases')
+            root_folder = Folder(self.jazz)
             result = root_folder.read(root_folder.artifact_uri)
             self.assertEqual(root_folder, result, "Call to read() did not return self")
             pass
@@ -74,7 +74,7 @@ class FindFolderTestCases(JazzTest):
     if 'FindFolderTestCases' not in jazz.jazz_config:
         def test_01_find_empty_path(self):
             """Empty path should return root folder"""
-            fs_finder = Folder(self.jazz, op_name='FindFolderTestCases')
+            fs_finder = Folder(self.jazz)
             root_folder = fs_finder.get_root_folder_uri()
             found = fs_finder.get_uri_of_matching_folder("")
             self.assertEqual(root_folder, found[0], "Empty path should return root")
@@ -92,10 +92,10 @@ class FindFolderTestCases(JazzTest):
 
         def test_20_find_top_dir_path(self):
             search_path = self.jazz.jazz_config['DIRECTORY_2']
-            fs_finder = Folder(self.jazz, op_name='FindFolderTestCases')
+            fs_finder = Folder(self.jazz)
             found = fs_finder.get_uri_of_matching_folder(search_path)
             self.assertGreater(len(found), 0, "one or more found paths")
-            folders = [self.jazz.get_xml(uri, op_name='read folders') for uri in found]
+            folders = [self.jazz.get_xml(uri) for uri in found]
             expected_name = search_path.split('/')[-1]
             for folder in folders:
                 found_name = folder.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
@@ -113,7 +113,7 @@ class FindResourcesTestCases(JazzTest):
             search_path = self.jazz.jazz_config['DIRECTORY_2']
             root = Folder(self.jazz)
             found_resources = root.get_folder_artifacts(path=search_path)
-            self.assertGreater(3, len(found_resources), "Should find more than 3 artifacts")
+            self.assertGreater(len(found_resources), 3, "Should find more than 3 artifacts")
             pass
 
         def test_30_get_folder_requirements(self):
@@ -123,10 +123,9 @@ class FindResourcesTestCases(JazzTest):
             """
             search_path = self.jazz.jazz_config['DIRECTORY_2']
             search_name = self.jazz.jazz_config['TEST_REQUIREMENT_1']
-            root = Folder(self.jazz, op_name='FindResourcesTestCases')
+            root = Folder(self.jazz)
             found_resources = root.get_folder_artifacts(path=search_path, name=search_name)
-            self.assertEqual(1, len(found_resources['Requirements']), "Should find 1 requirements")
-            self.assertNotIn('RequirementCollections', found_resources, "Should find NO requirement collection")
+            self.assertEqual(1, len(found_resources), f"Should find 1 requirements named {search_name}")
             pass
 
         def test_40_get_folder_collectiions(self):
@@ -136,10 +135,10 @@ class FindResourcesTestCases(JazzTest):
             """
             search_path = self.jazz.jazz_config['DIRECTORY_2']
             search_name = self.jazz.jazz_config['TEST_REQUIREMENT_COLLECTION_1']
-            root = Folder(self.jazz, op_name='FindResourcesTestCases')
+            root = Folder(self.jazz)
             found_resources = root.get_folder_artifacts(path=search_path, name=search_name)
-            self.assertNotIn('Requirements', found_resources, "Should find NO requirements")
-            self.assertEqual(1, len(found_resources['RequirementCollections']), "Should find 1 requirement collection")
+            self.assertEqual(1, len(found_resources),
+                             f"Should find 1 requirement collection named {search_name}")
             pass
 
 
@@ -147,11 +146,11 @@ class ResourceUpdateTestCases(JazzTest):
     if 'ResourceUpdateTestCases' not in jazz.jazz_config:
         def test_10_update_requirement_description(self):
             search_path = self.jazz.jazz_config['DIRECTORY_2']
-            fs_finder = Folder(self.jazz, op_name='FindResourcesTestCases')
+            fs_finder = Folder(self.jazz)
             found_resources = fs_finder.get_folder_artifacts(search_path)
-            self.assertGreater(len(found_resources['Requirements']), 0, "Should find at least one requirement...")
+            self.assertGreater(len(found_resources), 0, "Should find at least one requirement...")
 
-            requirement = Requirement(self.jazz, artifact_uri=found_resources['Requirements'][0], op_name='ResourceUpdateTestCases')
+            requirement = Requirement(self.jazz, artifact_uri=found_resources[0])
             requirement.get()
 
             text = requirement.description + "\n" if requirement.description is not None else ""
@@ -160,8 +159,7 @@ class ResourceUpdateTestCases(JazzTest):
 
             response = requirement.put()
 
-            result_requirement = Requirement(self.jazz, artifact_uri=found_resources['Requirements'][0],
-                                             op_name='ResourceUpdateTestCases')
+            result_requirement = Requirement(self.jazz, artifact_uri=found_resources[0])
             result_requirement.get()
 
             found_text = result_requirement.description if result_requirement.description is not None else ""
@@ -171,12 +169,11 @@ class ResourceUpdateTestCases(JazzTest):
 
         def test_20_update_collection_description(self):
             search_path = self.jazz.jazz_config['DIRECTORY_2']
-            fs_finder = Folder(self.jazz, op_name='FindResourcesTestCases')
+            fs_finder = Folder(self.jazz)
             found_resources = fs_finder.get_folder_artifacts(search_path)
-            self.assertGreater(len(found_resources['RequirementCollections']), 0, "Should find at least one Requirement Collection...")
+            self.assertGreater(len(found_resources), 0, "Should find at least one Requirement Collection...")
 
-            requirement = RequirementCollection(self.jazz, artifact_uri=found_resources['RequirementCollections'][0],
-                                                op_name='ResourceUpdateTestCases')
+            requirement = RequirementCollection(self.jazz, artifact_uri=found_resources[0],)
             requirement.get()
 
             requirement.get()
@@ -187,8 +184,7 @@ class ResourceUpdateTestCases(JazzTest):
 
             response = requirement.put()
 
-            result_requirement = RequirementCollection(self.jazz, artifact_uri=found_resources['RequirementCollections'][0],
-                                                       op_name='ResourceUpdateTestCases')
+            result_requirement = RequirementCollection(self.jazz, artifact_uri=found_resources[0])
             result_requirement.get()
 
             found_text = result_requirement.description if result_requirement.description is not None else ""
@@ -205,7 +201,7 @@ class TestCreateFolder(JazzTest):
                              "get service provider URL")
 
         def test_02_get_root_folder(self):
-            root_folder = Folder.get_root_folder(self.jazz, op_name='TestCreateFolder')
+            root_folder = Folder.get_root_folder(self.jazz)
             root_name = root_folder.get_name()
             self.assertEqual("root",
                              root_name,
@@ -213,7 +209,7 @@ class TestCreateFolder(JazzTest):
 
         def test_03_create_folder(self):
             PARENT_DELETE_ME = "parent_delete_me"
-            parent = Folder.create_folder(self.jazz, name=PARENT_DELETE_ME, op_name='TestCreateFolder')
+            parent = Folder.create_folder(self.jazz, name=PARENT_DELETE_ME)
             self.assertEqual(PARENT_DELETE_ME,
                              parent.get_name(),
                              "DNG doesn't agree about folder name")
@@ -224,7 +220,7 @@ class TestCreateFolder(JazzTest):
         def test_04_create_nested_folder(self):
             PARENT_NESTED_FOLDER = "parent_nested_folder"
             CHILD_FOLDER = "child_folder"
-            parent = Folder.create_folder(self.jazz, name=PARENT_NESTED_FOLDER, op_name='TestCreateFolder')
+            parent = Folder.create_folder(self.jazz, name=PARENT_NESTED_FOLDER)
             child = Folder.create_folder(self.jazz, name=CHILD_FOLDER, parent_folder=parent)
             self.assertEqual(CHILD_FOLDER,
                              child.get_name(),
@@ -235,8 +231,7 @@ class TestCreateFolder(JazzTest):
             created = Requirement.create_requirement(self.jazz,
                                                      name=name,
                                                      description="Here is some description!",
-                                                     parent_folder=Folder.get_root_folder(self.jazz),
-                                                     op_name = 'TestCreateFolder')
+                                                     parent_folder=Folder.get_root_folder(self.jazz))
 
             # At this point, the resource has been created but we have to read it to have a local copy...
             # created = RequirementRequest(self.jazz, artifact_uri=uri)
@@ -262,11 +257,11 @@ class ZendOfTesting(JazzTest):
 
     def test_30_remove_parent_nested_folder(self):
         target_uri_list = Folder(self.jazz).get_folder_artifacts(path="/", name="Test Data")
-        for uri in target_uri_list:
-            requirement = Requirement(self.jazz, artifact_uri=uri)
+        requirement_list = self.jazz.get_object_from_uri(target_uri_list)
+        for requirement in requirement_list:
             name = requirement.get_name()
+            self.assertEqual(name, "Test Data", "Failed to find '/Test Data' to delete")
             requirement.delete()
-            pass
 
 class FolderAndArtifactLookups(JazzTest):
     def test_010_get_root_folder_by_name(self):
@@ -284,30 +279,30 @@ class FolderAndArtifactLookups(JazzTest):
     def test_030_get_About_folder_by_name(self):
         """Look up About folder using "About" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
-        about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("About")
-        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri)
+        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folder("About")
+        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri_list[0])
         self.assertEqual("About", about_folder.get_name(), "Did not get correct name for About folder")
 
     def test_040_get_About_folder_by_rooted_name(self):
         """Look up About folder using "/About" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
-        about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/About")
-        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri)
+        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folder("/About")
+        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri_list[0])
         self.assertEqual("About", about_folder.get_name(), "Did not get correct name for 'About' folder")
 
     def test_050_get_About_User_Guide_artifacts_folder_by_rooted_name(self):
         """Look up About folder using "/About/User Guide artifacts" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
-        about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/About/User Guide artifacts")
-        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri)
+        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folder("/About/User Guide artifacts")
+        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri_list[0])
         self.assertEqual("User Guide artifacts", about_folder.get_name(),
                          "Did not get 'User Guide artifacts' name for 'User Guide artifacts' folder")
 
     def test_051_get_About_User_Guide_artifacts_folder_by_rooted_name(self):
         """Look up About folder using "/About/User Guide artifacts/" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
-        about_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/About/User Guide artifacts/")
-        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri)
+        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folder("/About/User Guide artifacts/")
+        about_folder = Folder(self.jazz, folder_uri=about_by_name_uri_list[0])
         self.assertEqual("User Guide artifacts", about_folder.get_name(),
                          "Did not get 'User Guide artifacts' name for 'User Guide artifacts' folder")
 
