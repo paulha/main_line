@@ -119,7 +119,7 @@ class Jazz:
 
             if op_name is not None:
                 if op_name not in self.reset_list:
-                    local_mode = "w"
+                    local_mode = "wb"
                     self.reset_list.append(op_name)
                 else:
                     local_mode = mode
@@ -405,7 +405,7 @@ class Jazz:
     def get_service_provider_root(self):
         self.logger.debug(f"get_service_provider_root()")
         if self._service_provider_root is None:
-            self._service_provider_root = self.get_xml(self.get_service_provider(), op_name='service provider')
+            self._service_provider_root = self.get_xml(self.get_service_provider())
 
         return self._service_provider_root
 

@@ -35,8 +35,7 @@ class RequirementTestCases(JazzTest):
     if 'RequirementTestCases' not in jazz.jazz_config:
         def test_01_requirement_get(self):
             r = Requirement(self.jazz, artifact_uri='artifact', instance_shape='shape', parent='parent',
-                            property_uri='property', description="This is some description",
-                            op_name='RequirementTestCases')
+                            property_uri='property', description="This is some description")
             self.assertEqual(r.artifact_uri, 'artifact')
             self.assertEqual(r.property_uri, 'property')
             self.assertEqual(r.instanceShape, 'shape')
