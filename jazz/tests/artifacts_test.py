@@ -75,13 +75,13 @@ class FindFolderTestCases(JazzTest):
             """Empty path should return root folder"""
             fs_finder = Folder(self.jazz)
             root_folder = fs_finder.get_root_folder_uri()
-            found = fs_finder.get_uri_of_matching_folder("")
+            found = fs_finder.get_uri_of_matching_folders("")
             self.assertEqual(root_folder, found[0], "Empty path should return root")
 
         def test_10_find_top_dir_path(self):
             search_path = self.jazz.jazz_config['DIRECTORY_1']
             fs_finder = Folder(self.jazz)
-            found = fs_finder.get_uri_of_matching_folder(search_path)
+            found = fs_finder.get_uri_of_matching_folders(search_path)
             self.assertGreater(len(found), 0, "one or more found paths")
             folders = [self.jazz.get_xml(uri) for uri in found]
             expected_name = search_path.split('/')[-1]
@@ -92,7 +92,7 @@ class FindFolderTestCases(JazzTest):
         def test_20_find_top_dir_path(self):
             search_path = self.jazz.jazz_config['DIRECTORY_2']
             fs_finder = Folder(self.jazz)
-            found = fs_finder.get_uri_of_matching_folder(search_path)
+            found = fs_finder.get_uri_of_matching_folders(search_path)
             self.assertGreater(len(found), 0, "one or more found paths")
             folders = [self.jazz.get_xml(uri) for uri in found]
             expected_name = search_path.split('/')[-1]
@@ -241,18 +241,18 @@ class TestCreateFolder(JazzTest):
 
 class ZendOfTesting(JazzTest):
     def test_10_remove_parent_delete_me(self):
-        target_uri_list = Folder(self.jazz).get_uri_of_matching_folder("parent_delete_me")
+        target_uri_list = Folder(self.jazz).get_uri_of_matching_folders("parent_delete_me")
         for uri in target_uri_list:
             folder = Folder(self.jazz, folder_uri=uri)
             folder.delete()
-            pass
+        pass
 
     def test_20_remove_parent_nested_folder(self):
-        target_uri_list = Folder(self.jazz).get_uri_of_matching_folder("parent_nested_folder")
+        target_uri_list = Folder(self.jazz).get_uri_of_matching_folders("parent_nested_folder")
         for uri in target_uri_list:
             folder = Folder(self.jazz, folder_uri=uri)
             folder.delete()
-            pass
+        pass
 
     def test_30_remove_parent_nested_folder(self):
         target_uri_list = Folder(self.jazz).get_folder_artifacts(path="/", name="Test Data")
@@ -261,38 +261,39 @@ class ZendOfTesting(JazzTest):
             name = requirement.get_name()
             self.assertEqual(name, "Test Data", "Failed to find '/Test Data' to delete")
             requirement.delete()
+        pass
 
 class FolderAndArtifactLookups(JazzTest):
     def test_010_get_root_folder_by_name(self):
         """Look up root folder using "/" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
-        root_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("/")
+        root_by_name_uri = Folder(self.jazz).get_uri_of_matching_folders("/")
         self.assertIn(root_folder_uri, root_by_name_uri, "Finding root folder by name '/' did not match uri's")
 
     def test_020_get_root_folder_by_empty_name(self):
         """Look up root folder using "" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
-        root_by_name_uri = Folder(self.jazz).get_uri_of_matching_folder("")
+        root_by_name_uri = Folder(self.jazz).get_uri_of_matching_folders("")
         self.assertIn(root_folder_uri, root_by_name_uri, "Finding root folder by name '' did not match uri's")
 
     def test_030_get_About_folder_by_name(self):
         """Look up About folder using "About" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
-        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folder("About")
+        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folders("About")
         about_folder = Folder(self.jazz, folder_uri=about_by_name_uri_list[0])
         self.assertEqual("About", about_folder.get_name(), "Did not get correct name for About folder")
 
     def test_040_get_About_folder_by_rooted_name(self):
         """Look up About folder using "/About" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
-        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folder("/About")
+        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folders("/About")
         about_folder = Folder(self.jazz, folder_uri=about_by_name_uri_list[0])
         self.assertEqual("About", about_folder.get_name(), "Did not get correct name for 'About' folder")
 
     def test_050_get_About_User_Guide_artifacts_folder_by_rooted_name(self):
         """Look up About folder using "/About/User Guide artifacts" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
-        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folder("/About/User Guide artifacts")
+        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folders("/About/User Guide artifacts")
         about_folder = Folder(self.jazz, folder_uri=about_by_name_uri_list[0])
         self.assertEqual("User Guide artifacts", about_folder.get_name(),
                          "Did not get 'User Guide artifacts' name for 'User Guide artifacts' folder")
@@ -300,7 +301,7 @@ class FolderAndArtifactLookups(JazzTest):
     def test_051_get_About_User_Guide_artifacts_folder_by_rooted_name(self):
         """Look up About folder using "/About/User Guide artifacts/" as the name."""
         root_folder_uri = Folder(self.jazz).get_root_folder_uri()
-        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folder("/About/User Guide artifacts/")
+        about_by_name_uri_list = Folder(self.jazz).get_uri_of_matching_folders("/About/User Guide artifacts/")
         about_folder = Folder(self.jazz, folder_uri=about_by_name_uri_list[0])
         self.assertEqual("User Guide artifacts", about_folder.get_name(),
                          "Did not get 'User Guide artifacts' name for 'User Guide artifacts' folder")

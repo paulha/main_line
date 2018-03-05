@@ -119,7 +119,7 @@ class Jazz:
 
             if op_name is not None:
                 if op_name not in self.reset_list:
-                    local_mode = "wb"
+                    local_mode = "w"    # FIXME: Has to be "w" but want binary...
                     self.reset_list.append(op_name)
                 else:
                     local_mode = mode
@@ -442,7 +442,7 @@ class Jazz:
                 resource_shape.xpath("//oslc:ResourceShape/dcterms:title/text()",
                                      namespaces=Jazz.xpath_namespace())[0]: resource_shape
                 for resource_shape in
-                [self.get_xml(shape, op_name='shapes') for shape in requirement_factory_shapes]
+                [self.get_xml(shape) for shape in requirement_factory_shapes]
             }
 
         return self._shapes_nodes_root[resource_type]

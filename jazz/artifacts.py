@@ -433,51 +433,50 @@ class Folder(DNGRequest):
         node = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
         return node[0]
 
-    def get_uri_of_matching_folder(self, path: str) -> list:
-        """
-        if path startswith "/" then start at root folder else start at the current folder
-
-        """
+    def get_uri_of_matching_folders(self, path: str) -> list:
+        name_list = []
         def get_subfolder_query(query: str):
             return self.jazz_client.get_xml(query, op_name=self.op_name)
 
-        def get_subfolder_names(query: str) -> list:
+        def get_subfolder_info(path: str, query: str) -> list:
+            """Return a list of matching subfolders"""
+            result_list = []
+            split_path = path.split("/")
             subfolders_root = get_subfolder_query(query)
             subfolder_list = subfolders_root.xpath("//nav:folder", namespaces=Jazz.xpath_namespace())
-            result = {}
             for candidate in subfolder_list:
                 name = candidate.xpath(".//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
-                sub_folders = candidate.xpath(".//nav:subfolders/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
-                about = candidate.xpath("../nav:folder/@rdf:about", namespaces=Jazz.xpath_namespace())[0]
-                result[name] = {'about': about, 'sub_folders': sub_folders}
+                if split_path[0]!=name:
+                    continue
 
-            return result
+                sub_folder_query = candidate.xpath(".//nav:subfolders/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
+
+                if len(split_path)>1:
+                    result_list = result_list + get_subfolder_info(split_path[1], sub_folder_query)
+                else:
+                    # No more path left, if we get here this is it!
+                    about = candidate.xpath("../nav:folder/@rdf:about", namespaces=Jazz.xpath_namespace())[0]
+                    result_list.append(about)
+                    name_list.append(name)
+
+            return result_list
 
         current_folder = self
         if path.startswith("/"):
             current_folder = self.get_root_folder(self.jazz_client)
             path = path[1:]
 
-        split_path = path.split("/")
-        folder_query = current_folder.subfolders
-        about = current_folder.artifact_uri
-        while split_path and split_path[0]:
-            current_name = split_path[0]
-            split_path = split_path[1:]
-            subfolder_names = get_subfolder_names(folder_query)
-            if current_name in subfolder_names:
-                folder_query = subfolder_names[current_name]['sub_folders']
-                about = subfolder_names[current_name]['about']
-            else:
-                return None
-
-        return about if isinstance(about, list) else [about]
+        if not path:
+            result_list = [current_folder.artifact_uri]
+        else:
+            result_list = get_subfolder_info(path, current_folder.subfolders)
+        return result_list
 
     #
     #   -- This belongs in DNGRequest (Maybe not. See below)
     #
     def get_folder_artifacts(self, path: str="", name: str=None) -> list:
-        parent_folder_uri_list = self.get_uri_of_matching_folder(path=path)
+        parent_folder_uri_list = self.get_uri_of_matching_folders(path=path)
 
         parent_list = " ".join([f"<{uri}>" for uri in parent_folder_uri_list])
         # fixme: by quoting name here, we lose the ability to do wildcard searches and arbitrary queries. :-(
