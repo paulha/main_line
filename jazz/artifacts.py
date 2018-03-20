@@ -593,7 +593,7 @@ class Folder(DNGRequest):
         xml_response = client.post_xml(folder_creation_factory, op_name=op_name, data=xml, check=get_response)
 
         if response.status_code not in [201]:
-            raise PermissionError(f"Unable to create folder '{folder_name}', result status {response.status_code}")
+            raise PermissionError(f"Unable to create folder '{name}', result status {response.status_code}")
 
         return Folder(client, folder_uri=response.headers['location'])
 
