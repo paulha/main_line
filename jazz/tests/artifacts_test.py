@@ -333,6 +333,16 @@ class FolderAndArtifactLookups(JazzTest):
         pass
 
 
+class FolderAndArtifactLookups(JazzTest):
+    def test_110_get_resource_collection(self):
+        """Access a resource collection"""
+        f = Folder(self.jazz)
+        result_list = f.get_folder_artifacts(path="Z: PFH -- Test Content/subfolder or Z: PFH -- Test Content", name="Test Collection")
+        objs = self.jazz.get_object_from_uri(result_list)
+        folders = self.jazz.get_object_from_uri(f.artifact_uri)
+        pass
+
+
 if __name__ == '__main__':
     unittest.main()
 
