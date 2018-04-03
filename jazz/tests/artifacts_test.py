@@ -337,13 +337,26 @@ class FolderAndArtifactLookups(JazzTest):
     def test_110_get_resource_collection(self):
         """Access a resource collection"""
         f = Folder(self.jazz)
+        folders = self.jazz.get_object_from_uri(f.artifact_uri)
+
         result_list = f.get_folder_artifacts(path="Z: PFH -- Test Content/subfolder or Z: PFH -- Test Content", name="Test Collection")
         objs = self.jazz.get_object_from_uri(result_list)
-        folders = self.jazz.get_object_from_uri(f.artifact_uri)
+        self.assertEqual(1, len(objs), "Did not return one (1) RequirementCollection")
+        for rc in objs:
+            self.assertIsInstance(rc, RequirementCollection, "Result object is not a RequirementCollection")
+            x = rc.requirement_set()
+            requirement_objs = self.jazz.get_object_from_uri(x)
+            self.assertEqual(3, len(requirement_objs), "Did not return one (3) Requirements")
+
         pass
 
 
 if __name__ == '__main__':
     unittest.main()
+
+
+
+
+
 
 

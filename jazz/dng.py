@@ -1,5 +1,5 @@
-# from .artifacts import Folder, RequirementRequest, RequirementCollection
 
+# from .artifacts import Folder, RequirementRequest, RequirementCollection
 # -- Support
 import sys
 from os.path import pathsep, dirname, realpath
@@ -246,12 +246,12 @@ class Jazz:
 
         if op_name is not None:
             if op_name not in self.reset_list:
-                local_mode = "wb"
+                local_mode = "w"
                 self.reset_list.append(op_name)
             else:
                 local_mode = mode
             with open(op_name + '.xml', local_mode) as f:
-                f.write(f"<!-- {op_name if op_name is not None else '-->'} request:  POST {url} -->\n")
+                f.write(f"<!-- {op_name if op_name is not None else '-->'} request:  POST {str(url)} -->\n")
                 f.write(f"<!-- {op_name if op_name is not None else '-->'} response: {response.status_code} -->\n")
                 f.write(f"<!-- {op_name if op_name is not None else '-->'} cookies:  {response.cookies} -->\n")
                 f.write(f"<!-- {op_name if op_name is not None else '-->'} headers:  {response.headers} -->\n")
@@ -533,7 +533,7 @@ class Jazz:
             shape_name = shape_xml.xpath("//oslc:ResourceShape/dcterms:title/text()",
                                          namespaces=self.xpath_namespace())[0]
             if shape_name not in self.shape_to_class_mapping:
-                log.logger.error(f"No class mapping found for '{shape_name}'")
+                log.logger.warning(f"No class mapping found for '{shape_name}'")
 
             self.shape_cache[shape_uri] = {
                 'xml': shape_xml,
@@ -544,19 +544,24 @@ class Jazz:
 
     def get_object_from_uri(self, uri_list, op_name=None):
         """Return an instance of the class refered to by the XML at the uri"""
-        if not isinstance(uri_list, list):
+        if not isinstance(uri_list, set) and not isinstance(uri_list, list):
             uri_list = [uri_list]
 
-        artifacts = []
+        artifacts = set()
         for uri in uri_list:
             artifact_xml_root = self.get_xml(url=uri, op_name=op_name if op_name is not None else self.op_name)
             # -- If you don't find instance shape, resort to the item type name (e.g., 'folder')
             if artifact_xml_root.xpath("//nav:folder", namespaces=Jazz.xpath_namespace()):
-                artifacts.append(self.shape_to_class_mapping['folder'](self, xml_root=artifact_xml_root))
+                artifacts.add(self.shape_to_class_mapping['folder'](self, xml_root=artifact_xml_root))
             else:
                 shape_uri = artifact_xml_root.xpath("//oslc:instanceShape/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
                 shape_info = self.get_shape_info(shape_uri)
-                artifacts.append(shape_info['class'](self, instance_shape=shape_uri, xml_root=artifact_xml_root))
+                if shape_info['class'] is not None:
+                    artifacts.add(shape_info['class'](self, instance_shape=shape_uri, xml_root=artifact_xml_root))
+                else:
+                    self.logger.warning(f"Unknown Shape, Info is: {shape_info}")
+                    from jazz.artifacts import GenericRequirement
+                    artifacts.add(GenericRequirement(self, instance_shape=shape_uri, xml_root=artifact_xml_root))
 
         return artifacts
 

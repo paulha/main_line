@@ -1,4 +1,4 @@
-
+from collections import Iterable
 from lxml import etree
 import re
 import utility_funcs.logger_yaml as log
@@ -137,7 +137,7 @@ class DNGRequest:
         self.init_from_xml_root()
         return self
 
-    def update_xml_root(self):
+    def update_from_xml_root(self):
         self.xpath_get_item("//dcterms:title").text = self.title if self.title is not None else ""
         self.xpath_get_item("//dcterms:description").text = self.description if self.description is not None else ''
         # self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
@@ -145,7 +145,7 @@ class DNGRequest:
                                                               self.parent if self.parent is not None else '')
 
     def put(self) -> object:
-        self.update_xml_root()
+        self.update_from_xml_root()
         text = etree.tostring(self.xml_root)
         etag = self.xml_root.attrib['ETag'] if 'ETag' in self.xml_root.attrib else None
         del self.xml_root.attrib['ETag']
@@ -174,7 +174,7 @@ class DNGRequest:
         return self
 
     def delete(self) -> object:
-        self.update_xml_root()
+        self.update_from_xml_root()
         text = etree.tostring(self.xml_root)
         etag = self.xml_root.attrib['ETag'] if 'ETag' in self.xml_root.attrib else None
         del self.xml_root.attrib['ETag']
@@ -204,29 +204,47 @@ class DNGRequest:
 
 class RequirementCollection(DNGRequest):
     """
-    <!-- This example is missing the 'uses' tag, which includes a resource... -->
-    <oslc_rm:RequirementCollection rdf:about="https://rtc-sbox.intel.com/rrc/resources/_qjQ-AwhLEeit3bw9wrTg3Q">
-        <rt:_ySe9YXNnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:02:50.624Z</rt:_ySe9YXNnEeecjP8b5e9Miw>
-        <dcterms:description>Looks like this can contain other artifacts. :-)</dcterms:description>
-        <oslc:instanceShape rdf:resource="https://rtc-sbox.intel.com/rrc/types/_GeAbgnNoEeecjP8b5e9Miw"/>
-        <dcterms:title>Copy of This is a &quot;Collection Release&quot;</dcterms:title>
-        <rt:_yQ2lunNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
-        <dcterms:modified rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:02:50.624Z</dcterms:modified>
-        <dcterms:creator rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
-        <dcterms:created rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:02:50.624Z</dcterms:created>
-        <rt:_yX1-h3NnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:02:50.624Z</rt:_yX1-h3NnEeecjP8b5e9Miw>
-        <f1:accessControl rdf:resource="https://rtc-sbox.intel.com/rrc/accessControl/_xf5p4XNnEeecjP8b5e9Miw"/>
-        <nav:parent rdf:resource="https://rtc-sbox.intel.com/rrc/folders/_4p0zw_J4Eeec-bwG5--tlA"/>
-        <dcterms:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">244084</dcterms:identifier>
-        <rmTypes:ArtifactFormat rdf:resource="https://rtc-sbox.intel.com/rrc/types/_yBhwT3NnEeecjP8b5e9Miw#Collection"/>
-        <dcterms:contributor rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
-        <rt:_yUH8KXNnEeecjP8b5e9Miw rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
-    </oslc_rm:RequirementCollection>
-
+    <rdf:RDF xmlns:nav="http://jazz.net/ns/rm/navigation#" xmlns:rm_property="https://rtc-sbox.intel.com/rrc/types/"
+         xmlns:acp="http://jazz.net/ns/acp#" xmlns:oslc_rm="http://open-services.net/ns/rm#"
+         xmlns:oslc="http://open-services.net/ns/core#" xmlns:oslc_config="http://open-services.net/ns/config#"
+         xmlns:oslc_auto="http://open-services.net/ns/auto#" xmlns:dc="http://purl.org/dc/elements/1.1/"
+         xmlns:process="http://jazz.net/ns/process#" xmlns:jazz_rm="http://jazz.net/ns/rm#"
+         xmlns:calm="http://jazz.net/xmlns/prod/jazz/calm/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rm="http://www.ibm.com/xmlns/rdm/rdf/" xmlns:public_rm_10="http://www.ibm.com/xmlns/rm/public/1.0/"
+         xmlns:dng_task="http://jazz.net/ns/rm/dng/task#" xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:acc="http://open-services.net/ns/core/acc#">
+        <rdf:Description rdf:about="https://rtc-sbox.intel.com/rrc/resources/_DNuDUxBUEeit3bw9wrTg3Q">
+            <process:projectArea rdf:resource="https://rtc-sbox.intel.com/rrc/process/project-areas/_xf5p4XNnEeecjP8b5e9Miw"/>
+            <nav:parent rdf:resource="https://rtc-sbox.intel.com/rrc/folders/_4p0zw_J4Eeec-bwG5--tlA"/>
+            <dcterms:created rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-13T00:23:01.428Z
+            </dcterms:created>
+            <oslc:instanceShape rdf:resource="https://rtc-sbox.intel.com/rrc/types/_GeAbgnNoEeecjP8b5e9Miw"/>
+            <dcterms:contributor rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+            <dcterms:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#string">247587</dcterms:identifier>
+            <dcterms:creator rdf:resource="https://rtc-sbox.intel.com/jts/users/pfhanchx"/>
+            <dcterms:modified rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-27T00:16:37.354Z
+            </dcterms:modified>
+            <acp:accessControl rdf:resource="https://rtc-sbox.intel.com/rrc/accessControl/_xf5p4XNnEeecjP8b5e9Miw"/>
+            <dcterms:title rdf:parseType="Literal">Test Collection</dcterms:title>
+            <oslc:serviceProvider rdf:resource="https://rtc-sbox.intel.com/rrc/oslc_rm/_xf5p4XNnEeecjP8b5e9Miw/services.xml"/>
+            <rdf:type rdf:resource="http://jazz.net/ns/rm#Collection"/>
+            <oslc_rm:uses rdf:resource="https://rtc-sbox.intel.com/rrc/resources/_culds7S7EeeKve_VoIyffA"/>
+            <oslc_config:component rdf:resource="https://rtc-sbox.intel.com/rrc/cm/component/_xv-GMHNnEeecjP8b5e9Miw"/>
+            <oslc_rm:uses rdf:resource="https://rtc-sbox.intel.com/rrc/resources/_B0x7URHREeit3bw9wrTg3Q"/>
+            <rdf:type rdf:resource="http://open-services.net/ns/rm#RequirementCollection"/>
+            <oslc_rm:uses rdf:resource="https://rtc-sbox.intel.com/rrc/resources/_anNx4REbEeit3bw9wrTg3Q"/>
+            <dcterms:description rdf:parseType="Literal">This is a new line.This is a new line.This is a new line.This is a
+                new line.This is a new line.This is a new line.This is a new line.This is a new line.This is a new line.This
+                is a new line.This is a new line.This is a new line.This is a new line.This is a new line.This is a new
+                line.This is a new line.This is a new line.This is a new line.This is a new line.This is a new line.This is
+                a new line.This is a new line.This is a new line.
+            </dcterms:description>
+        </rdf:Description>
+    </rdf:RDF>
     """
     def __init__(self, jazz_client: object, artifact_uri: str=None, instance_shape: str=None,
                  title: str = None, description: str = None, parent: str = None, xml_root=None,
-                 property_uri: str=None, op_name: str=None, **kwargs):
+                 property_uri: str=None, op_name: str='RequirementCollection', **kwargs):
         super().__init__(jazz_client, artifact_uri=artifact_uri, title=title, description=description, parent=parent, xml_root=xml_root,
                          primary_list=['uri', 'title', 'identifier', 'type', 'description', 'subject', 'creator', 'modified'],
                          property_uri=property_uri, instance_shape=instance_shape,
@@ -235,21 +253,43 @@ class RequirementCollection(DNGRequest):
         for key in kwargs:
             self[key] = kwargs[key]
 
-    def update_xml_root(self):
-        super().update_xml_root()
+        self._requirements = None
+
+    def update_from_xml_root(self):
+        super().update_from_xml_root()
 
         # FIXME: Fill in the proper values!
         # self.xpath_get_item("//dcterms:title").text = self.title if self.title is not None else ""
         # self.xpath_get_item("//dcterms:description").text = self.description if self.description is not None else ''
         # self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
         # self.xpath_get_item("//nav:parent", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
-        #                                                       self.parent if self.parent is not None else '')
+        #
+        #                                       self.parent if self.parent is not None else '')
+
+    def requirement_set(self):
+        if self._requirements is None:
+            self._requirements = set()
+            for requirement_uri in self.xml_root.xpath("//oslc_rm:uses/@rdf:resource",
+                                                       namespaces=Jazz.xpath_namespace()):
+                self._requirements.add(requirement_uri)
+            pass
+
+        return self._requirements
+
+    def add_requirements(self, uri_list: Iterable):
+        self.requirement_set().union(set(uri_list))
+        pass
+
+    def remove_requirements(self, uri_list: Iterable):
+        self.requirement_set().remove(set(uri_list))
+
 
 
 Jazz.map_shape_name_to_class("Collection Release", RequirementCollection)
 
 
-class Requirement(DNGRequest):
+class GenericRequirement(DNGRequest):
+    """Generic Requirement place holder class..."""
     """
     <oslc_rm:Requirement rdf:about="https://rtc-sbox.intel.com/rrc/resources/_d6-AwwhLEeit3bw9wrTg3Q">
         <rt:_ySe9YXNnEeecjP8b5e9Miw rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-02-02T19:01:25.882Z</rt:_ySe9YXNnEeecjP8b5e9Miw>
@@ -283,11 +323,8 @@ class Requirement(DNGRequest):
                          property_uri=property_uri, instance_shape=instance_shape,
                          resource_property_list=['primaryText'], op_name=op_name)
 
-        for key in kwargs:
-            self[key] = kwargs[key]
-
-    def update_xml_root(self):
-        super().update_xml_root()
+    def update_from_xml_root(self):
+        super().update_from_xml_root()
 
         # FIXME: Fill in the proper values!
         # self.xpath_get_item("//dcterms:title").text = self.title if self.title is not None else ""
@@ -295,6 +332,27 @@ class Requirement(DNGRequest):
         # self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
         # self.xpath_get_item("//nav:parent", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
         #                                                       self.parent if self.parent is not None else '')
+
+
+Jazz.map_shape_name_to_class("Generic Requirement", GenericRequirement)
+
+
+class Requirement(GenericRequirement):
+
+    def __init__(self, jazz_client: object, artifact_uri: str=None, instance_shape: str=None,
+                 title: str = None, description: str = None, parent: str = None, xml_root=None,
+                 property_uri: str=None, op_name: str=None, **kwargs):
+        super().__init__(jazz_client, artifact_uri=artifact_uri, title=title, description=description,
+                         parent=parent, xml_root=xml_root,
+                         primary_list=[
+                             'uri', 'title', 'identifier', 'type', 'description', 'subject',
+                             'creator', 'modified',
+                         ],
+                         property_uri=property_uri, instance_shape=instance_shape,
+                         resource_property_list=['primaryText'], op_name=op_name)
+
+        for key in kwargs:
+            self[key] = kwargs[key]
 
     @classmethod
     def create_requirement(cls, client: Jazz, name: str=None, description: str=None, parent_folder: object=None,
@@ -404,8 +462,8 @@ class Folder(DNGRequest):
         self.init_from_xml_root()
         return self
 
-    def update_xml_root(self):
-        super().update_xml_root()
+    def update_from_xml_root(self):
+        super().update_from_xml_root()
 
         if self.component is not None:
             #self.xpath_get_item("//oslc_config:component/@rdf:resource", func=None)[0] = self.component
