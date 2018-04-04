@@ -1,5 +1,6 @@
 from collections import Iterable
 from lxml import etree
+
 import re
 import utility_funcs.logger_yaml as log
 from .dng import Jazz
@@ -144,6 +145,9 @@ class DNGRequest:
         self.xpath_get_item("//nav:parent", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
                                                               self.parent if self.parent is not None else '')
 
+    def update_to_xml_root(self):
+        pass
+
     def put(self) -> object:
         self.update_from_xml_root()
         text = etree.tostring(self.xml_root)
@@ -265,6 +269,17 @@ class RequirementCollection(DNGRequest):
         # self.xpath_get_item("//nav:parent", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
         #
         #                                       self.parent if self.parent is not None else '')
+
+    def update_to_xml_root(self):
+        super().update_to_xml_root()
+        requirements = self.requirement_set()
+        # -- Remove existing uses elements
+        description = self.xml_root.xpath("//rdf:Description", namespaces=Jazz.xpath_namespace())[0]
+        for uses in self.xml_root.xpath("//oslc_rm:uses", namespaces=Jazz.xpath_namespace()):
+            description.remove(uses)
+        for resource in requirements:
+            description.append(etree._Element("oslc_rm:uses", attrib={'rdf:resource': resource}))
+        return etree.tostring(self.xml_root)
 
     def requirement_set(self):
         if self._requirements is None:

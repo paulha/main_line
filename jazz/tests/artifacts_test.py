@@ -344,6 +344,7 @@ class FolderAndArtifactLookups(JazzTest):
         self.assertEqual(1, len(objs), "Did not return one (1) RequirementCollection")
         for rc in objs:
             self.assertIsInstance(rc, RequirementCollection, "Result object is not a RequirementCollection")
+            rc.update_to_xml_root()
             x = rc.requirement_set()
             requirement_objs = self.jazz.get_object_from_uri(x)
             self.assertEqual(3, len(requirement_objs), "Did not return one (3) Requirements")
