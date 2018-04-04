@@ -1,5 +1,6 @@
 from collections import Iterable
 from lxml import etree
+from lxml.etree import Element
 
 import re
 import utility_funcs.logger_yaml as log
@@ -129,15 +130,6 @@ class DNGRequest:
 
         raise LookupError(f"Unknown field name: {key}")
 
-    def get(self) -> object:
-        """Make a request to the server to please read get this thing..."""
-        if self.artifact_uri is None:
-            raise Exception("artifact_uri is not set")
-
-        self.xml_root = self.jazz_client.get_xml(self.artifact_uri, op_name=self.op_name)
-        self.init_from_xml_root()
-        return self
-
     def update_from_xml_root(self):
         self.xpath_get_item("//dcterms:title").text = self.title if self.title is not None else ""
         self.xpath_get_item("//dcterms:description").text = self.description if self.description is not None else ''
@@ -148,8 +140,17 @@ class DNGRequest:
     def update_to_xml_root(self):
         pass
 
+    def get(self) -> object:
+        """Make a request to the server to please read get this thing..."""
+        if self.artifact_uri is None:
+            raise Exception("artifact_uri is not set")
+
+        self.xml_root = self.jazz_client.get_xml(self.artifact_uri, op_name=self.op_name)
+        self.init_from_xml_root()
+        return self
+
     def put(self) -> object:
-        self.update_from_xml_root()
+        self.update_to_xml_root()
         text = etree.tostring(self.xml_root)
         etag = self.xml_root.attrib['ETag'] if 'ETag' in self.xml_root.attrib else None
         del self.xml_root.attrib['ETag']
@@ -272,14 +273,24 @@ class RequirementCollection(DNGRequest):
 
     def update_to_xml_root(self):
         super().update_to_xml_root()
+        description_element = self.xml_root.xpath("//rdf:Description", namespaces=Jazz.xpath_namespace())[0]
+
+        # -- save the current (updated) set of requirements
         requirements = self.requirement_set()
-        # -- Remove existing uses elements
-        description = self.xml_root.xpath("//rdf:Description", namespaces=Jazz.xpath_namespace())[0]
-        for uses in self.xml_root.xpath("//oslc_rm:uses", namespaces=Jazz.xpath_namespace()):
-            description.remove(uses)
+
+        # -- Remove currently attached requirements
+        for uses_element in self.xml_root.xpath("//oslc_rm:uses", namespaces=Jazz.xpath_namespace()):
+            description_element.remove(uses_element)
+
+        # -- Append the updated list of requirements
+        uses_qname = etree.QName("{http://open-services.net/ns/rm#}uses")
+        resource_qname = etree.QName("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource")
         for resource in requirements:
-            description.append(etree._Element("oslc_rm:uses", attrib={'rdf:resource': resource}))
-        return etree.tostring(self.xml_root)
+            attrib = {resource_qname: resource}
+            e = etree._Element.makeelement(self.xml_root, uses_qname, attrib=attrib)
+            description_element.append(e)
+
+        return etree.tostring(self.xml_root, )
 
     def requirement_set(self):
         if self._requirements is None:
