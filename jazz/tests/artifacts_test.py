@@ -1,7 +1,7 @@
 import unittest
 from lxml import etree
 from .dng_test import JazzTest, jazz, SERVICE_PROVIDER_URL
-from jazz.artifacts import Requirement, RequirementCollection, Folder
+from jazz.artifacts import Requirement, Collection, Folder
 from jazz.dng import Jazz
 
 sample = """
@@ -172,7 +172,7 @@ class ResourceUpdateTestCases(JazzTest):
             found_resources = fs_finder.get_folder_artifacts(search_path)
             self.assertGreater(len(found_resources), 0, "Should find at least one Requirement Collection...")
 
-            requirement = RequirementCollection(self.jazz, artifact_uri=found_resources[0],)
+            requirement = Collection(self.jazz, artifact_uri=found_resources[0], )
             requirement.get()
 
             requirement.get()
@@ -183,7 +183,7 @@ class ResourceUpdateTestCases(JazzTest):
 
             response = requirement.put()
 
-            result_requirement = RequirementCollection(self.jazz, artifact_uri=found_resources[0])
+            result_requirement = Collection(self.jazz, artifact_uri=found_resources[0])
             result_requirement.get()
 
             found_text = result_requirement.description if result_requirement.description is not None else ""
@@ -337,13 +337,13 @@ class FolderAndArtifactLookups(JazzTest):
     def test_110_get_resource_collection(self):
         """Access a resource collection"""
         f = Folder(self.jazz)
-        folders = self.jazz.get_object_from_uri(f.artifact_uri)
+        # folders = self.jazz.get_object_from_uri(f.artifact_uri)
 
         result_list = f.get_folder_artifacts(path="Z: PFH -- Test Content/subfolder or Z: PFH -- Test Content", name="Test Collection")
         objs = self.jazz.get_object_from_uri(result_list)
         self.assertEqual(1, len(objs), "Did not return one (1) RequirementCollection")
         for rc in objs:
-            self.assertIsInstance(rc, RequirementCollection, "Result object is not a RequirementCollection")
+            self.assertIsInstance(rc, Collection, "Result object is not a RequirementCollection")
             xml = rc.update_to_xml_root()
             x = rc.requirement_set()
             requirement_objs = self.jazz.get_object_from_uri(x)

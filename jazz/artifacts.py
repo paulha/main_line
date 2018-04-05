@@ -45,6 +45,13 @@ class DNGRequest:
         node = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
         return node[0]
 
+    def get_identifier(self, op_name=None) -> str:
+        node = self.xml_root.xpath("//dcterms:identifier/text()", namespaces=Jazz.xpath_namespace())
+        return node[0]
+
+    def __str__(self):
+        return self.get_identifier()+": "+self.get_name()
+
     def xpath_get_item(self, xpath, func=lambda x: x[0] if len(x) > 0 else None):
         element = self.xml_root.xpath(xpath, namespaces=Jazz.xpath_namespace())
         return func(element) if func is not None else element
@@ -207,7 +214,7 @@ class DNGRequest:
         return self
 
 
-class RequirementCollection(DNGRequest):
+class Collection(DNGRequest):
     """
     <rdf:RDF xmlns:nav="http://jazz.net/ns/rm/navigation#" xmlns:rm_property="https://rtc-sbox.intel.com/rrc/types/"
          xmlns:acp="http://jazz.net/ns/acp#" xmlns:oslc_rm="http://open-services.net/ns/rm#"
@@ -311,7 +318,7 @@ class RequirementCollection(DNGRequest):
 
 
 
-Jazz.map_shape_name_to_class("Collection Release", RequirementCollection)
+Jazz.map_shape_name_to_class("Collection", Collection)
 
 
 class GenericRequirement(DNGRequest):
@@ -419,6 +426,7 @@ class Requirement(GenericRequirement):
         return Requirement(client, xml_root=xml_response)
 
 
+Jazz.map_shape_name_to_class("Requirement-Functional", Requirement)
 Jazz.map_shape_name_to_class("Default Requirement", Requirement)
 
 

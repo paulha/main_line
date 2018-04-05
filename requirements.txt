@@ -1,5 +1,7 @@
 pysocks
 lxml
+jira
+openpyxl
 requests
 # urllib
 urllib3

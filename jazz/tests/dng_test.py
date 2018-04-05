@@ -1,7 +1,7 @@
 import unittest
 
 from jazz.dng import Jazz, JAZZ_CONFIG_PATH
-from jazz.artifacts import Folder, Requirement, RequirementCollection
+from jazz.artifacts import Folder, Requirement, Collection
 import urllib3
 import utility_funcs.logger_yaml as log
 
