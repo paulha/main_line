@@ -43,11 +43,11 @@ class DNGRequest:
 
     def get_name(self, op_name=None) -> str:
         node = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
-        return node[0]
+        return str(node[0])
 
     def get_identifier(self, op_name=None) -> str:
         node = self.xml_root.xpath("//dcterms:identifier/text()", namespaces=Jazz.xpath_namespace())
-        return node[0]
+        return str(node[0])
 
     def __str__(self):
         return self.get_identifier()+": "+self.get_name()

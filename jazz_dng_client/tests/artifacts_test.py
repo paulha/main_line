@@ -1,8 +1,8 @@
 import unittest
 from lxml import etree
 from .dng_test import JazzTest, jazz, SERVICE_PROVIDER_URL
-from jazz.artifacts import Requirement, Collection, Folder
-from jazz.dng import Jazz
+from jazz_dng_client.artifacts import Requirement, Collection, Folder
+from jazz_dng_client.dng import Jazz
 
 sample = """
 <rdf:RDF

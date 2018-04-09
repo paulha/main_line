@@ -560,7 +560,7 @@ class Jazz:
                     artifacts.add(shape_info['class'](self, instance_shape=shape_uri, xml_root=artifact_xml_root))
                 else:
                     self.logger.warning(f"Unknown Shape, Info is: {shape_info}")
-                    from jazz.artifacts import GenericRequirement
+                    from jazz_dng_client.artifacts import GenericRequirement
                     artifacts.add(GenericRequirement(self, instance_shape=shape_uri, xml_root=artifact_xml_root))
 
         return artifacts
