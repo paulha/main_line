@@ -1,3 +1,4 @@
+import yaml
 import urllib3
 from os.path import expanduser, pathsep, dirname, realpath
 import sys
@@ -12,7 +13,7 @@ import utility_funcs.logger_yaml as log
 JIRA_CONFIG_PATH = f"{dirname(realpath(sys.argv[0]))}/config.yaml{pathsep}~/.jira/config.yaml"
 
 # -- TODO: Move this to a configuration file, take target from command line!
-config = {
+"""config = {
     'test': {
         'jazz server': 'production',
         'path': "Programs/Broxton-P IVI (BXT-P-IVI)",
@@ -69,12 +70,16 @@ config = {
 
 }
 environment = config['AIA']
-
+"""
 
 def read_jazz_requirements(jazz_client, path: str, name: str) -> dict:
     requirements_by_id = {}
     log.logger.info(f"Opening the collection {name}")
     result_list = Folder(jazz_client).get_folder_artifacts(path=path, name=name)
+    if len(result_list) < 1 :
+        log.logger.error(f"Unable to open collection, path='{path}', name='{name}'; not found or possibly locked.")
+        exit(-1)
+
     for resource_collection in jazz.get_object_from_uri(result_list[0]):
         if isinstance(resource_collection, Collection):
             requirement_set = resource_collection.requirement_set()
@@ -101,7 +106,7 @@ def read_jira_epics(jira_client, query):
 
 
 def read_jira(jira_client):
-    return read_jira_epics(jira_client=jira_client, query=environment['jira query'])
+    return read_jira_epics(jira_client=jira_client, query=environment['jira_query'])
 
 
 def sort_matched(y):
@@ -114,9 +119,26 @@ def set_width(sheet, cols: dict):
         sheet.column_dimensions[col].width = cols[col]
 
 
+try:
+    with open("environments.yaml", "r") as f:
+        config = yaml.load(f)
+except FileNotFoundError as nf:
+    log.logger.error("File 'environments.yaml' not found %s", nf)
+    exit(-1)
+
+if len(sys.argv) < 2:
+    log.logger.error(f"{sys.argv[0]} <tag>, available tags are {[t for t in config]}" )
+    exit(-1)
+
+if sys.argv[1] not in config:
+    log.logger.error(f"configuration '{sys.argv[1]}' was not found")
+    exit(-1)
+
+environment = config[sys.argv[1]]
+
 urllib3.disable_warnings()
-jazz = Jazz(server_alias=environment['jazz server'], config_path=JAZZ_CONFIG_PATH, use_cache=True, op_name=None)
-jira = Jira(environment['jira server'], JIRA_CONFIG_PATH, log=log.logger)
+jazz = Jazz(server_alias=environment['jazz_server'], config_path=JAZZ_CONFIG_PATH, use_cache=True, op_name=None)
+jira = Jira(environment['jira_server'], JIRA_CONFIG_PATH, log=log.logger)
 epic_name = jira.get_field_name('Epic Name')
 status = jira.get_field_name('Status')
 external_link = jira.get_field_name('External Link')
@@ -153,7 +175,7 @@ ws_summary['C3'] = environment['path']
 ws_summary['B4'] = "DNG Name:"
 ws_summary['C4'] = environment['name']
 ws_summary['B5'] = "Jira Query:"
-ws_summary['C5'] = environment['jira query']
+ws_summary['C5'] = environment['jira_query']
 ws_summary['B6'] = len(requirements_by_id)
 ws_summary['C6'] = "DNG Requirements were analyzed"
 log.logger.info(f"{len(items_by_id)} Jira items were analyzed")

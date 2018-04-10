@@ -1,0 +1,50 @@
+#
+# Configuration file for DNG_Jira_Crosscheck:
+#
+test:
+    jazz_server: production
+    path: Programs/Broxton-P IVI (BXT-P-IVI)
+    name: Broxton-P IVI | AaaG-ACRN | P
+    jira_server: jira01
+    jira_query: project=OAM and summary~'Keystone Lake Refresh | Bare Metal | O-MR1' order by key
+    xls: test.xlsx
+
+AIA:
+    jazz_server: production
+    path: Programs/Android IA 2.0 (AIA 2.0)
+    name: Android AIA 2.0 | Apollo Lake IVI | O-MR1
+    jira_server: jira01
+    jira_query: project=OAM and summary~'Android AIA 2.0 | Apollo Lake IVI | O-MR1' order by key
+    xls: AIA.xlsx
+
+BXT-P-IVI:
+    jazz_server: production
+    path: Programs/Broxton-P IVI (BXT-P-IVI)
+    name: Kings Falls | Bare Metal | O-MR1
+    jira_server: jira01
+    jira_query: project=OAM and summary~'Kings Falls | Bare Metal | O-MR1' order by key
+    xls: BXT-P-IVI.xlsx
+
+EHL:
+    jazz_server: production
+    path: Programs/Elkhart Lake (EHL)
+    name: Elkhart Lake | Bare Metal | O-MR1
+    jira_server: jira01
+    jira_query: project=OAM and summary~'Elkhart Lake | Bare Metal | O-MR1' order by key
+    xls: EHL.xlsx
+
+KSL-R:
+    jazz_server: production
+    path: Programs/Keystone Lake Refresh (KSL-R)
+    name: Keystone Lake Refresh | Bare Metal | O-MR1
+    jira_server: jira01
+    jira_query: project=OAM and summary~'Keystone Lake Refresh | Bare Metal | O-MR1' order by key
+    xls: KSL-R.xlsx
+
+KGF:
+    jazz_server: production
+    path: Programs/Kings Falls (KGF)
+    name: Kings Falls | Bare Metal | O-MR1
+    jira_server: jira01
+    jira_query: project=OAM and summary~'Kings Falls | Bare Metal | O-MR1' order by key
+    xls: KGF.xlsx

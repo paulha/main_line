@@ -367,7 +367,7 @@ class Jazz:
             self.log.fatal("Can't open JAZZ authentication configuration file: %s" % f)
             raise FileNotFoundError("Can't find Jazz configuration file", JAZZ_CONFIG_PATH)
 
-        self.logger.info(f"Using JAMA server instance {self.jazz_config['host']}{self.jazz_config['instance']}")
+        self.logger.info(f"Using Jazz server instance {self.jazz_config['host']}{self.jazz_config['instance']}")
 
         data = {'j_username': self.jazz_config['username'], 'j_password': self.jazz_config['password']}
         login_response = self.jazz_session.post(f"{self.jazz_config['host']}{self.jazz_config['instance']}/auth/j_security_check",
