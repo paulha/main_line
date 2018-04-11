@@ -1,5 +1,5 @@
 # os
-yaml
+PyYAML
 pysocks
 lxml
 jira
