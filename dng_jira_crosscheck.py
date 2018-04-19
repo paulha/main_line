@@ -12,65 +12,6 @@ import utility_funcs.logger_yaml as log
 
 JIRA_CONFIG_PATH = f"{dirname(realpath(sys.argv[0]))}/config.yaml{pathsep}~/.jira/config.yaml"
 
-# -- TODO: Move this to a configuration file, take target from command line!
-"""config = {
-    'test': {
-        'jazz server': 'production',
-        'path': "Programs/Broxton-P IVI (BXT-P-IVI)",
-        'name': "Broxton-P IVI | AaaG-ACRN | P",
-        'jira server': 'jira01',
-        'jira query': 'project=OAM and summary~"Keystone Lake Refresh | Bare Metal | O-MR1" order by key',
-        'xls': 'test.xlsx',
-     },
-
-    'AIA': {
-        'jazz server': 'production',
-        'path': "Programs/Android IA 2.0 (AIA 2.0)",
-        'name': "Android AIA 2.0 | Apollo Lake IVI | O-MR1",
-        'jira server': 'jira01',
-        'jira query': 'project=OAM and summary~"Android AIA 2.0 | Apollo Lake IVI | O-MR1" order by key',
-        'xls': 'AIA.xlsx',
-    },
-
-    'BXT-P-IVI': {
-        'jazz server': 'production',
-        'path': "Programs/Broxton-P IVI (BXT-P-IVI)",
-        'name': "Kings Falls | Bare Metal | O-MR1",
-        'jira server': 'jira01',
-        'jira query': 'project=OAM and summary~"Kings Falls | Bare Metal | O-MR1" order by key',
-        'xls': 'BXT-P-IVI.xlsx',
-    },
-
-    'EHL': {
-        'jazz server': 'production',
-        'path': "Programs/Elkhart Lake (EHL)",
-        'name': "Kings Falls | Bare Metal | O-MR1",
-        'jira server': 'jira01',
-        'jira query': 'project=OAM and summary~"Android AIA 2.0 | Apollo Lake IVI | O-MR1" order by key',
-        'xls': 'EHL.xlsx',
-    },
-
-    'KSL-R': {
-        'jazz server': 'production',
-        'path': "Programs/Keystone Lake Refresh (KSL-R)",
-        'name': "Keystone Lake Refresh | Bare Metal | O-MR1",
-        'jira server': 'jira01',
-        'jira query': 'project=OAM and summary~"Keystone Lake Refresh | Bare Metal | O-MR1" order by key',
-        'xls': 'KSL-R.xlsx',
-    },
-
-    'KGF': {
-        'jazz server': 'production',
-        'path': "Programs/Kings Falls (KGF)",
-        'name': "Kings Falls | Bare Metal | O-MR1",
-        'jira server': 'jira01',
-        'jira query': 'project=OAM and summary~"Kings Falls | Bare Metal | O-MR1" order by key',
-        'xls': 'KGF.xlsx',
-    },
-
-}
-environment = config['AIA']
-"""
 
 def read_jazz_requirements(jazz_client, path: str, name: str) -> dict:
     requirements_by_id = {}
