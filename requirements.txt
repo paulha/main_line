@@ -3,7 +3,7 @@ PyYAML
 pysocks
 lxml
 jira
-jira_class
+jira_tools
 openpyxl
 requests
 urllib3
