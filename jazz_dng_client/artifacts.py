@@ -268,7 +268,7 @@ class Collection(DNGRequest):
         self._requirements = None
 
     def __str__(self):
-        return f"Collection ID={self.get_identifier()}"
+        return f"Collection ID={self.get_identifier()} '{self.get_name()}'"
 
     def update_from_xml_root(self):
         super().update_from_xml_root()
@@ -360,7 +360,7 @@ class GenericRequirement(DNGRequest):
                          resource_property_list=['primaryText'], op_name=op_name)
 
     def __str__(self):
-        return f"GenericRequirement ID={self.get_identifier()}"
+        return f"GenericRequirement ID={self.get_identifier()} '{self.get_name()}'"
 
     def external_system_id(self):
         """Returns the External System ID"""
@@ -400,7 +400,7 @@ class Requirement(GenericRequirement):
             self[key] = kwargs[key]
 
     def __str__(self):
-        return f"Requirement ID={self.get_identifier()}"
+        return f"Requirement ID={self.get_identifier()} '{self.get_name()}'"
 
     def external_system_id(self):
         """Returns the External System ID"""
@@ -504,7 +504,7 @@ class Folder(DNGRequest):
             self.read(self.get_root_folder_uri(op_name=op_name))
 
     def __str__(self):
-        return f"Folder: '{self.title}' "
+        return f"Folder: '{self.get_name()}'"
 
     def init_from_xml_root(self):
         super().init_from_xml_root()

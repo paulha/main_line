@@ -5,9 +5,9 @@ DNG_Catalog:
     jazz_server: production
     catalog_paths: [
       # -- Why doesn't this first one work?
-      #Requirements,
+      Requirements,
       #      Requirements/_Imported/Functional Requirements (FRs from JAMA),
-      Requirements/Android for Work,
+      # Requirements/Android for Work,
       #      Requirements/Android Framework,
       #      #      # Requirements/Apps - GMS/Core,     # <-- NOTE: This is a problem!
       #      Requirements/ART,

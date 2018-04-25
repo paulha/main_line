@@ -1,6 +1,7 @@
 from main_line import *
 import urllib3
 import sys
+import regex as re
 
 from jazz_dng_client import *
 from lxml import etree
@@ -73,6 +74,30 @@ def get_catalog(config, log):
     lookup = {x.get_identifier(): x for x in catalog_artifacts}
     requirement = lookup['50161']
     ext_id = requirement.external_system_id()
+    requirement_by_dngid = {}
+    requirement_by_jirakey = {}
+    requirement_by_gid = {}
+    jira_key_regex = r"^[A-Za-z]+-\d+"
+    is_jira_key = re.compile(jira_key_regex)
+    gid_regex = r"^\d+-\d+"
+    is_gid = re.compile(gid_regex)
+    for requirement in catalog_artifacts:
+        dngid = requirement.get_identifier()
+        key = str(requirement.external_system_id()).strip()
+
+        requirement_by_dngid[dngid] = requirement
+        if re.search(jira_key_regex, key): # is_jira_key.match(key):
+            if key in requirement_by_jirakey:
+                log.logger.warning(f"Requirement {dngid} and Requirement {requirement_by_jirakey[key].get_identifier()} duplicated jira key {key}")
+            else:
+                requirement_by_jirakey[key] = requirement
+
+        elif re.search(gid_regex, key): #   is_gid.match(key):
+            if key in requirement_by_gid:
+                log.logger.warning(f"Requirement {dngid} and Requirement {requirement_by_gid[key].get_identifier()} duplicated GID key {key}")
+            else:
+                requirement_by_gid[key] = requirement
+
     pass
 
 

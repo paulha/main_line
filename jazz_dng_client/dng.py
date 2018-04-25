@@ -45,7 +45,7 @@ class Jazz:
             "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
             "rm": "http://www.ibm.com/xmlns/rdm/rdf/",
             "rm_jazz": "http://jazz.net/ns/rm#",
-            "rm_property": "http://rtc.intel.com/dng0001001/types/",
+            "rm_property": "https://rtc.intel.com/dng0001001/types/",
         }
 
     def get_xpath_string(self):
