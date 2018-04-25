@@ -45,6 +45,7 @@ class Jazz:
             "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
             "rm": "http://www.ibm.com/xmlns/rdm/rdf/",
             "rm_jazz": "http://jazz.net/ns/rm#",
+            "rm_property": "http://rtc.intel.com/dng0001001/types/",
         }
 
     def get_xpath_string(self):
@@ -128,7 +129,7 @@ class Jazz:
                     f.write(f"<!-- {op_name} response: {response.status_code} -->\n")
                     f.write(f"<!-- {op_name} cookies:  {response.cookies} -->\n")
                     f.write(f"<!-- {op_name} headers:  {response.headers} -->\n")
-                    f.write(response.text+"\n")
+                    f.write(f"{response.text.encode('ascii', 'ignore')}\n")
 
             if check is not None:
                 check(response)

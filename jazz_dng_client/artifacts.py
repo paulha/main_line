@@ -267,6 +267,9 @@ class Collection(DNGRequest):
 
         self._requirements = None
 
+    def __str__(self):
+        return f"Collection ID={self.get_identifier()}"
+
     def update_from_xml_root(self):
         super().update_from_xml_root()
 
@@ -356,6 +359,15 @@ class GenericRequirement(DNGRequest):
                          property_uri=property_uri, instance_shape=instance_shape,
                          resource_property_list=['primaryText'], op_name=op_name)
 
+    def __str__(self):
+        return f"GenericRequirement ID={self.get_identifier()}"
+
+    def external_system_id(self):
+        """Returns the External System ID"""
+        # -- FIXME: Don't like this value at all...
+        id_list = self.xml_root.xpath("//rm_property:_5cTORK_4EeekDP1y4xXYPQ/text()", namespaces=Jazz.xpath_namespace())
+        return id_list[0] if len(id_list) > 0 else None
+
     def update_from_xml_root(self):
         super().update_from_xml_root()
 
@@ -386,6 +398,15 @@ class Requirement(GenericRequirement):
 
         for key in kwargs:
             self[key] = kwargs[key]
+
+    def __str__(self):
+        return f"Requirement ID={self.get_identifier()}"
+
+    def external_system_id(self):
+        """Returns the External System ID"""
+        # -- FIXME: Don't like this value at all...  _5cTORK_4EeekDP1y4xXYPQ
+        id_list = self.xml_root.xpath("//rm_property:_5cTORK_4EeekDP1y4xXYPQ/text()", namespaces=Jazz.xpath_namespace())
+        return id_list[0] if len(id_list) > 0 else None
 
     @classmethod
     def create_requirement(cls, client: Jazz, name: str=None, description: str=None, parent_folder: object=None,
@@ -482,6 +503,9 @@ class Folder(DNGRequest):
         else:
             self.read(self.get_root_folder_uri(op_name=op_name))
 
+    def __str__(self):
+        return f"Folder: '{self.title}' "
+
     def init_from_xml_root(self):
         super().init_from_xml_root()
         self.component = self.xpath_get_item("//oslc_config:component/@rdf:resource")
@@ -525,34 +549,36 @@ class Folder(DNGRequest):
         node = self.xml_root.xpath("//dcterms:title/text()", namespaces=Jazz.xpath_namespace())
         return node[0]
 
-    def get_uri_of_matching_folders(self, path: str) -> list:
+    def get_subfolder_query(self, query: str):
+        return self.jazz_client.get_xml(query, op_name=self.op_name)
+
+    def get_subfolder_info(self, path: str, query: str) -> list:
+        """Return a list of matching subfolders"""
+        result_list = []
         name_list = []
-        def get_subfolder_query(query: str):
-            return self.jazz_client.get_xml(query, op_name=self.op_name)
 
-        def get_subfolder_info(path: str, query: str) -> list:
-            """Return a list of matching subfolders"""
-            result_list = []
-            split_path = path.split("/")
-            subfolders_root = get_subfolder_query(query)
-            subfolder_list = subfolders_root.xpath("//nav:folder", namespaces=Jazz.xpath_namespace())
-            for candidate in subfolder_list:
-                name = candidate.xpath(".//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
-                if split_path[0]!=name:
-                    continue
+        split_path = path.split("/")
+        subfolders_root = self.get_subfolder_query(query)
+        subfolder_list = subfolders_root.xpath("//nav:folder", namespaces=Jazz.xpath_namespace())
+        for candidate in subfolder_list:
+            name = candidate.xpath(".//dcterms:title/text()", namespaces=Jazz.xpath_namespace())[0]
+            if split_path[0] != name:
+                continue
 
-                sub_folder_query = candidate.xpath(".//nav:subfolders/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
+            sub_folder_query = candidate.xpath(".//nav:subfolders/@rdf:resource", namespaces=Jazz.xpath_namespace())[0]
 
-                if len(split_path)>1:
-                    result_list = result_list + get_subfolder_info(split_path[1], sub_folder_query)
-                else:
-                    # No more path left, if we get here this is it!
-                    about = candidate.xpath("../nav:folder/@rdf:about", namespaces=Jazz.xpath_namespace())[0]
-                    result_list.append(about)
-                    name_list.append(name)
+            if len(split_path) > 1:
+                result_list = result_list + self.get_subfolder_info(split_path[1], sub_folder_query)
+            else:
+                # No more path left, if we get here this is it!
+                about = candidate.xpath("../nav:folder/@rdf:about", namespaces=Jazz.xpath_namespace())[0]
+                result_list.append(about)
+                name_list.append(name)
 
-            return result_list
+        return result_list
 
+    def get_uri_of_matching_folders(self, path: str) -> list:
+        # FIXME: This search does not work properly for subfolders, but it should be possible...
         current_folder = self
         if path.startswith("/"):
             current_folder = self.get_root_folder(self.jazz_client)
@@ -561,7 +587,7 @@ class Folder(DNGRequest):
         if not path:
             result_list = [current_folder.artifact_uri]
         else:
-            result_list = get_subfolder_info(path, current_folder.subfolders)
+            result_list = self.get_subfolder_info(path, current_folder.subfolders)
         return result_list
 
     #

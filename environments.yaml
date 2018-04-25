@@ -1,6 +1,19 @@
 #
 # Configuration file for DNG_Jira_Crosscheck:
 #
+DNG_Catalog:
+    jazz_server: production
+    catalog_paths: [
+      # -- Why doesn't this first one work?
+      #Requirements,
+      #      Requirements/_Imported/Functional Requirements (FRs from JAMA),
+      Requirements/Android for Work,
+      #      Requirements/Android Framework,
+      #      #      # Requirements/Apps - GMS/Core,     # <-- NOTE: This is a problem!
+      #      Requirements/ART,
+      #      Requirements/Audio,
+    ]
+
 test:
     jazz_server: production
     path: Programs/Broxton-P IVI (BXT-P-IVI)

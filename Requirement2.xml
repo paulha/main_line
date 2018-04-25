@@ -1,0 +1,113 @@
+<?xml version=\'1.0\' encoding=\'ASCII\'?>
+<rdf:RDF xmlns:nav="http://jazz.net/ns/rm/navigation#" xmlns:acp="http://jazz.net/ns/acp#"
+         xmlns:oslc_rm="http://open-services.net/ns/rm#" xmlns:oslc="http://open-services.net/ns/core#"
+         xmlns:rm_property="https://rtc.intel.com/dng0001001/types/"
+         xmlns:oslc_config="http://open-services.net/ns/config#" xmlns:oslc_auto="http://open-services.net/ns/auto#"
+         xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:process="http://jazz.net/ns/process#"
+         xmlns:jazz_rm="http://jazz.net/ns/rm#" xmlns:calm="http://jazz.net/xmlns/prod/jazz/calm/1.0/"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rm="http://www.ibm.com/xmlns/rdm/rdf/"
+         xmlns:public_rm_10="http://www.ibm.com/xmlns/rm/public/1.0/" xmlns:dng_task="http://jazz.net/ns/rm/dng/task#"
+         xmlns:j.0="http://www.ibm.com/xmlns/rdm/types/" xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:acc="http://open-services.net/ns/core/acc#" ETag="&quot;%220%22&amp;%22_wSJZscDvEeepXsxzzaNHyg%22&quot;">
+    <rdf:Description rdf:about="https://rtc.intel.com/dng0001001/resources/_wN-rF8DvEeepXsxzzaNHyg">
+        <rm_property:_5aOKoa_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_2fNLAa_4EeekDP1y4xXYPQ#96427dc4-0a5f-43cb-8fc9-6b4677246cc0"/>
+        <dcterms:title rdf:parseType="Literal">Work Profile ConnectionService</dcterms:title>
+        <dcterms:creator rdf:resource="https://rtc.intel.com/jts/users/rmbeatty"/>
+        <dcterms:modified rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2017-11-03T23:37:20.684Z
+        </dcterms:modified>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#89fa0b67-d4d0-4173-8ef0-464eea9a3b33"/>
+        <acp:accessControl rdf:resource="https://rtc.intel.com/dng0001001/accessControl/_zQHY0a_4EeekDP1y4xXYPQ"/>
+        <dcterms:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#string">50161</dcterms:identifier>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#e906ff16-d8f2-4b73-8a18-1868e4f16e5a"/>
+        <rm_property:_4G6Ioa_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_2gsYwa_4EeekDP1y4xXYPQ#7da21906-ed1f-4317-8829-c76a1f82eb19"/>
+        <rm_property:_6LdaUa_4EeekDP1y4xXYPQ rdf:resource="https://rtc.intel.com/jts/users/arocchia"/>
+        <rm_property:_4rW5ga_4EeekDP1y4xXYPQ rdf:datatype="http://www.w3.org/2001/XMLSchema#string">[[ Reasoning that
+            justifies requirement ]]
+        </rm_property:_4rW5ga_4EeekDP1y4xXYPQ>
+        <process:teamArea
+                rdf:resource="https://rtc.intel.com/dng0001001/process/project-areas/_zQHY0a_4EeekDP1y4xXYPQ/team-areas/_rATqIMDgEeepXsxzzaNHyg"/>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#e9c67513-db50-42ff-8942-a0e9df64427a"/>
+        <j.0:External rdf:resource="https://jira01.devtools.intel.com/browse/OAM-58031"/>
+        <oslc:instanceShape rdf:resource="https://rtc.intel.com/dng0001001/types/_9hGgca_4EeekDP1y4xXYPQ"/>
+        <process:projectArea
+                rdf:resource="https://rtc.intel.com/dng0001001/process/project-areas/_zQHY0a_4EeekDP1y4xXYPQ"/>
+        <rdf:type rdf:resource="http://open-services.net/ns/rm#Requirement"/>
+        <oslc:serviceProvider
+                rdf:resource="https://rtc.intel.com/dng0001001/oslc_rm/_zQHY0a_4EeekDP1y4xXYPQ/services.xml"/>
+        <j.0:External rdf:resource="https://jira01.devtools.intel.com/browse/OAM-59489"/>
+        <nav:parent rdf:resource="https://rtc.intel.com/dng0001001/folders/_Hp94AeA3EeeC2s0026pxng"/>
+        <rm_property:_5mkkka_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_2i7NYa_4EeekDP1y4xXYPQ#fb13f810-a851-46d0-801e-014287f1c436"/>
+        <rm_property:_6CGC8a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_3McEd6_4EeekDP1y4xXYPQ#3d92d0b7-c3bb-4497-8e18-aade5e944c05"/>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#e65cc878-9ab0-44f1-8dd3-575d4b90e3e9"/>
+        <rm_property:_5LMQKK_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_3RC3oa_4EeekDP1y4xXYPQ#33ae2dde-b18e-408b-8a22-858a3b47b3a2"/>
+        <j.0:External rdf:resource="https://jira01.devtools.intel.com/browse/OAM-55381"/>
+        <rm_property:_5FsFE6_4EeekDP1y4xXYPQ rdf:datatype="http://www.w3.org/2001/XMLSchema#string">[[ Additional notes
+            providing clarification ]]
+        </rm_property:_5FsFE6_4EeekDP1y4xXYPQ>
+        <rm_property:_5cTORK_4EeekDP1y4xXYPQ>AREQ-16490</rm_property:_5cTORK_4EeekDP1y4xXYPQ>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#f232f1d5-93b1-4037-8047-45a0f4a7ec0e"/>
+        <rm_property:_4kqboa_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_2acm0q_4EeekDP1y4xXYPQ#3e9db9f1-3d5c-4716-aae0-f48d49260a8b"/>
+        <dcterms:contributor rdf:resource="https://rtc.intel.com/jts/users/rmbeatty"/>
+        <rm_property:_5e-u0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_3Vzb0a_4EeekDP1y4xXYPQ#5c3ed796-ffd1-45e9-8574-2a514809705f"/>
+        <rm_property:_5S7P0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_2VZHua_4EeekDP1y4xXYPQ#1522f4e9-f4c0-43f8-87a9-c657f948e4b3"/>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#e24c9754-ac0f-46be-8c83-891b5cb36d0e"/>
+        <dcterms:created rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2017-11-03T23:36:02.806Z
+        </dcterms:created>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#6fa87dfa-bc35-42c8-8801-597d83ee8d75"/>
+        <rm_property:_5S7P0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_2VZHua_4EeekDP1y4xXYPQ#d39094db-0363-4048-8964-457d0e98ce5b"/>
+        <rm_property:_4cn58a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_3SiFYq_4EeekDP1y4xXYPQ#f70b420c-1c5a-439c-8b6c-36d98102a28e"/>
+        <rm_property:_48BLsa_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_24M50a_4EeekDP1y4xXYPQ#1ab6c0a2-3313-4831-8167-9941a0bd0c49"/>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#a8c3302c-7a5c-4a86-8ed6-4ef39adfc998"/>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#69e78a4b-a732-478b-8b7a-56202cf2b327"/>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#58846268-58ad-42a2-8204-405aef6e0989"/>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#9c7415e4-df7f-49fd-8a1b-d5a852d9a431"/>
+        <jazz_rm:primaryText rdf:parseType="Literal">
+            <div xmlns="http://www.w3.org/1999/xhtml">
+                <p id="_15097521064260">Profile owners can specify a work dialer application that uses a work-specific
+                    ConnectionService for the calling backend (calling accounts). The work dialer maintains a work-only
+                    call log and relies on work contacts only. Users have a consistent in-call UI experience regardless
+                    of dialing application. Incoming work calls to the work calling accounts are distinguished from
+                    personal incoming calls to the personal calling accounts.
+                    <br/>
+                </p>
+                <p id="_15097521064261">The dialer should check for the new flag android.telecom.Call.PROPERTY_WORK_CALL
+                    to determine if a call is a work call. If a call is a work call, the dialer should indicate this,
+                    such as by adding a work badge.
+                </p>
+            </div>
+        </jazz_rm:primaryText>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#4c01692a-a0b4-46a4-8250-5b4045b42816"/>
+        <rm_property:_4t4pF6_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_2qhDI6_4EeekDP1y4xXYPQ#a63f8130-0ce2-40d7-82d8-c75c812e0473"/>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#6753791c-c4e0-4b83-84db-f1d013c52163"/>
+        <oslc_config:component rdf:resource="https://rtc.intel.com/dng0001001/cm/component/_zgCEIq_4EeekDP1y4xXYPQ"/>
+        <rdf:type rdf:resource="http://jazz.net/ns/rm#Text"/>
+        <rm_property:_4Xap0a_4EeekDP1y4xXYPQ
+                rdf:resource="https://rtc.intel.com/dng0001001/types/_27oBQq_4EeekDP1y4xXYPQ#e3661efb-eddc-4200-8f41-d6a3d956c4b1"/>
+        <rm_property:_5sN5ka_4EeekDP1y4xXYPQ>Android Requirements</rm_property:_5sN5ka_4EeekDP1y4xXYPQ>
+    </rdf:Description>
+</rdf:RDF>
