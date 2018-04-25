@@ -1,4 +1,4 @@
-<?xml version=\'1.0\' encoding=\'ASCII\'?>
+<?xml version='1.0' encoding='ASCII'?>
 <rdf:RDF xmlns:nav="http://jazz.net/ns/rm/navigation#" xmlns:acp="http://jazz.net/ns/acp#"
          xmlns:oslc_rm="http://open-services.net/ns/rm#" xmlns:oslc="http://open-services.net/ns/core#"
          xmlns:rm_property="https://rtc.intel.com/dng0001001/types/"
