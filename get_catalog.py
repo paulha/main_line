@@ -6,9 +6,12 @@ import regex as re
 from jazz_dng_client import *
 from lxml import etree
 
+import pickle
+
 
 def tos( element ):
     return etree.tostring(element, xml_declaration=True)
+
 
 def traverse_path(jazz_client: Jazz, path: str, base_folder: Folder=None, folder_separator: str="/") -> Folder :
     split_path = path.split(folder_separator)
@@ -63,17 +66,30 @@ def find_requirements(jazz_client, paths):
                 log.logger.error(f"Did not read correct number of resources. :-(")
             artifacts.extend(subgroup)
 
-
     log.logger.info(f"Found a total of {len(folders)} Folders and {len(artifacts)} Artifacts...")
     return folders, artifacts
+
+
+def get_requirement_as_dict(item) -> dict:
+    return {
+        'NAME':  item.get_name(),
+        # This sort of bothers me, what if the original is poorly formatted XML?
+        'PRIMARY_TEXT': etree.tostring(item.primary_text, xml_declaration=True) if item.primary_text is not None else '',
+        'DNGID': item.get_identifier(),
+        'URI':   item.artifact_uri,
+        'EXTERNAL': str(item.external_system_id()).strip() if item.external_system_id() is not None else "",
+        'KEY':   None,
+        'GID':   None,
+    }
+
 
 def get_catalog(config, log):
     environment = config['DNG_Catalog']
     jazz_client = Jazz(environment['jazz_server'], JAZZ_CONFIG_PATH)
     catalog_folders, catalog_artifacts = find_requirements(jazz_client, environment['catalog_paths'])
-    lookup = {x.get_identifier(): x for x in catalog_artifacts}
+    lookup = {x.get_identifier(): get_requirement_as_dict(x) for x in catalog_artifacts}
     requirement = lookup['50161']
-    ext_id = requirement.external_system_id()
+    ext_id = requirement['EXTERNAL']
     requirement_by_dngid = {}
     requirement_by_jirakey = {}
     requirement_by_gid = {}
@@ -81,24 +97,30 @@ def get_catalog(config, log):
     is_jira_key = re.compile(jira_key_regex)
     gid_regex = r"^\d+-\d+"
     is_gid = re.compile(gid_regex)
-    for requirement in catalog_artifacts:
-        dngid = requirement.get_identifier()
-        key = str(requirement.external_system_id()).strip()
+    for dngid, requirement in lookup.items():
+        # dngid = requirement['DNGID']
+        key = str(requirement['EXTERNAL'])
+        requirement['KEY'] = key if re.search(jira_key_regex, key) else None
+        requirement['GID'] = key if re.search(gid_regex, key) else None
 
         requirement_by_dngid[dngid] = requirement
-        if re.search(jira_key_regex, key): # is_jira_key.match(key):
-            if key in requirement_by_jirakey:
-                log.logger.warning(f"Requirement {dngid} and Requirement {requirement_by_jirakey[key].get_identifier()} duplicated jira key {key}")
-            else:
-                requirement_by_jirakey[key] = requirement
 
-        elif re.search(gid_regex, key): #   is_gid.match(key):
-            if key in requirement_by_gid:
-                log.logger.warning(f"Requirement {dngid} and Requirement {requirement_by_gid[key].get_identifier()} duplicated GID key {key}")
-            else:
-                requirement_by_gid[key] = requirement
+        if requirement['KEY'] is not None:
+            # Duplicates check?
+            requirement_by_jirakey[key] = requirement
 
-    pass
+        if requirement['GID'] is not None:
+            # Duplicates check?
+            requirement_by_gid[key] = requirement
+
+
+    with open(environment['pickle_file'], 'wb') as f:
+        log.logger.info(f"Writing Requirements by DNG ID to picklefile '{environment['pickle_file']}'")
+        pickle.dump(requirement_by_dngid, f)
+        log.logger.info(f"Writing Requirements by JAMA GID to picklefile '{environment['pickle_file']}'")
+        pickle.dump(requirement_by_gid, f)
+        log.logger.info(f"Writing Requirements by Jira KEY to picklefile '{environment['pickle_file']}'")
+        pickle.dump(requirement_by_jirakey, f)
 
 
 if __name__ == "__main__":

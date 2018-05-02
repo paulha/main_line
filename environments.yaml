@@ -13,6 +13,17 @@ DNG_Catalog:
       #      Requirements/ART,
       #      Requirements/Audio,
     ]
+    pickle_file:  'dng_catalog.pickle'
+
+Platform_Content:
+    jira_server:  jira01
+    preq:         project = PREQ AND issuetype in standardIssueTypes() AND status not in (Rejected) AND "Platform/Program" in ("Icelake-U SDC") and "Android Version(s)" in (O) and summary!~"AaaG" order by key
+    areq:         project = AREQ AND issuetype in (E-Feature) AND status not in (Rejected) AND "Platform/Program" in ("Icelake-U SDC") and "Android Version(s)" in (O) and summary!~"AaaG" order by key
+    pickle_file:  'areq_preq.pickle'
+
+analyse:
+    dng_pickle_file:  'dng_catalog.pickle'
+    jira_pickle_file: 'areq_preq.pickle'
 
 test:
     jazz_server: production

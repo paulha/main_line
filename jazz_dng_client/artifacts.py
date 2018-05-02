@@ -12,14 +12,15 @@ class DNGRequest:
 class DNGRequest:
     # -- Note: ETag is stored in attrib list of xml_root
     def __init__(self, jazz_client: Jazz,
-                 artifact_uri: str=None, title: str = None, description: str=None, parent: str=None, xml_root=None,
-                 instance_shape: str=None, property_uri: str=None,
+                 artifact_uri: str=None, title: str = None, description: str=None, primary_text: str=None,
+                 parent: str=None, xml_root=None, instance_shape: str=None, property_uri: str=None,
                  primary_list: list=[], primary: dict={},
                  literal_property_list: list=[], literal_properties: dict={},
                  resource_property_list: list=[], resource_properties: dict={},
                  op_name=None ):
         self.artifact_uri = artifact_uri
         self.description = description
+        self.primary_text = primary_text
         self.instanceShape = instance_shape
         self.jazz_client = jazz_client
         self.op_name = op_name
@@ -63,6 +64,7 @@ class DNGRequest:
         self.artifact_uri = self.xpath_get_item("//*/@rdf:about")
         self.title = self.xpath_get_item("//dcterms:title/text()")
         self.description = self.xpath_get_item("//dcterms:description/text()")
+        self.primary_text = self.xpath_get_item("//descendant::jazz_rm:primaryText/*")
         self.parent = self.xpath_get_item("//nav:parent/@rdf:resource")
 
         # Is this appropriate in all cases?
@@ -140,6 +142,7 @@ class DNGRequest:
     def update_from_xml_root(self):
         self.xpath_get_item("//dcterms:title").text = self.title if self.title is not None else ""
         self.xpath_get_item("//dcterms:description").text = self.description if self.description is not None else ''
+        # FIXME: self.xpath_get_item("//descendant::jazz_rm:primaryText/*") = self.description if self.description is not None else ''
         # self.xpath_get_item("//nav:parent/@rdf:resource", func=None)[0] = self.parent if self.parent is not None else ''
         self.xpath_get_item("//nav:parent", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
                                                               self.parent if self.parent is not None else '')
@@ -212,6 +215,19 @@ class DNGRequest:
             self.init_from_xml_root()
 
         return self
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Remove the unpicklable entries.
+        del state['xml_root']
+        #
+        return state
+
+    def __setstate__(self, state):
+        # Restore instance attributes (i.e., filename and lineno).
+        self.__dict__.update(state)
+        # re-read the internal state using 'artifact_uri'...
+        self.get()
 
 
 class Collection(DNGRequest):
@@ -378,6 +394,20 @@ class GenericRequirement(DNGRequest):
         # self.xpath_get_item("//nav:parent", func=None)[0].set(self.jazz_client.resolve_name("rdf:resource"),
         #                                                       self.parent if self.parent is not None else '')
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Remove the unpicklable entries.
+        del state['xml_root']
+        #
+        return state
+
+    def __setstate__(self, state):
+        # Restore instance attributes (i.e., filename and lineno).
+        self.__dict__.update(state)
+        # re-read the internal state using 'artifact_uri'...
+        self.get()
+
+
 
 Jazz.map_shape_name_to_class("Generic Requirement", GenericRequirement)
 
@@ -445,6 +475,19 @@ class Requirement(GenericRequirement):
             raise PermissionError(f"Unable to create Requirement '{name}', result status {response.status_code}")
 
         return Requirement(client, xml_root=xml_response)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Remove the unpicklable entries.
+        del state['xml_root']
+        #
+        return state
+
+    def __setstate__(self, state):
+        # Restore instance attributes (i.e., filename and lineno).
+        self.__dict__.update(state)
+        # re-read the internal state using 'artifact_uri'...
+        self.get()
 
 
 Jazz.map_shape_name_to_class("Requirement-Functional", Requirement)

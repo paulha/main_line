@@ -46,6 +46,7 @@ class Jazz:
             "rm": "http://www.ibm.com/xmlns/rdm/rdf/",
             "rm_jazz": "http://jazz.net/ns/rm#",
             "rm_property": "https://rtc.intel.com/dng0001001/types/",
+            "jazz_rm": "http://jazz.net/ns/rm#"
         }
 
     def get_xpath_string(self):
@@ -62,7 +63,7 @@ class Jazz:
 
         return f"{{{ns_name[0]}}}{ns_name[1]}"
 
-    def __init__(self, server_alias=None, config_path=None, namespace=None, op_name=XML_LOG_FILE, log=log, use_cache=True):
+    def __init__(self, server_alias=None, config_path=None, namespace=None, op_name=None, log=log, use_cache=True):
         self.xml_cache = {}
         self.use_cache = use_cache
         self.root_folder = None
