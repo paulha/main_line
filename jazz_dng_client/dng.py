@@ -12,6 +12,9 @@ import urllib3
 import utility_funcs.logger_yaml as log
 
 from utility_funcs.search import get_server_info
+# from jazz_dng_client.artifacts import Folder
+
+
 import re
 
 urllib3.disable_warnings()
@@ -566,6 +569,65 @@ class Jazz:
                     artifacts.add(GenericRequirement(self, instance_shape=shape_uri, xml_root=artifact_xml_root))
 
         return artifacts
+
+    def traverse_path(self, path: str, base_folder=None, folder_separator: str= "/"):
+        from jazz_dng_client.artifacts import Folder
+
+        split_path = path.split(folder_separator)
+        base = Folder.get_root_folder(self) if base_folder is None else base_folder
+        for folder_name in split_path:
+            base_uri_list = base.get_uri_of_matching_folders(folder_name)
+            if len(base_uri_list)==0:
+                # -- No match found
+                return []
+
+            # -- Note that in Jazz, duplicate names on the same level are actually allowed!
+            base = Folder(self, folder_uri=base_uri_list[0])
+
+        return base
+
+    def get_all_subfolders(self, folder, path: str=None) -> list:
+        """Return all subordinate folders"""
+        from jazz_dng_client.artifacts import Folder
+
+        log.logger.debug(f"Checking {folder}...")
+
+        result_list = []
+        subfolders_root = folder.get_subfolder_query(folder.subfolders)
+        subfolder_uri_list = subfolders_root.xpath("//nav:folder/@rdf:about", namespaces=Jazz.xpath_namespace())
+        if len(subfolder_uri_list)>0:
+            for sub_folder_uri in subfolder_uri_list:
+                sub_folder = Folder(self, folder_uri=sub_folder_uri)
+                result_list.append(sub_folder) # -- Should already have been added...
+                sub_folder_list = self.get_all_subfolders(sub_folder, path)
+                result_list.extend(sub_folder_list)
+        else:
+            result_list.append(folder)
+
+        log.logger.debug(f"{folder} Found {len(result_list)} folders: {result_list}")
+        return result_list
+
+    def find_requirements(self, paths, name: str=None):
+        folders = []
+        artifacts = []
+        for path in paths:
+            log.logger.info(f"Reading {path}")
+            folder = self.traverse_path(path)
+            found_folders = self.get_all_subfolders(folder)
+            for this_folder in found_folders:
+                found_artifacts = this_folder.get_folder_artifacts(name=name)
+                log.logger.info(f"Found {len(found_artifacts)} artifacts")
+                folders.extend(found_artifacts)
+                log.logger.info(f"Getting artifacts from uris...")
+                subgroup = self.get_object_from_uri(found_artifacts)
+                log.logger.info(f"got {len(subgroup)} items...")
+                if len(subgroup) != len(found_artifacts):
+                    log.logger.error(f"Did not read correct number of resources. :-(")
+                artifacts.extend(subgroup)
+
+        log.logger.info(f"Found a total of {len(folders)} Folders and {len(artifacts)} Artifacts...")
+        return folders, artifacts
+
 
 
 def main():

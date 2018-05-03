@@ -4,7 +4,7 @@ from lxml.etree import Element
 
 import re
 import utility_funcs.logger_yaml as log
-from .dng import Jazz
+from jazz_dng_client.dng import Jazz
 
 class DNGRequest:
     pass
@@ -167,7 +167,7 @@ class DNGRequest:
         log.logger.debug(f"About to put {text}")
 
         def check_response(response):
-            # log.logger.debug(f"Result was {response}")
+            log.logger.debug(f"Result was {response}")
             if response.status_code >= 400 and response.status_code <= 499:
                 raise Exception(f"Result was {response}. Couldn't put artifact.")
             pass
@@ -180,6 +180,7 @@ class DNGRequest:
         # FIXME: We get back the updated object, that data needs to be read into local state.
         if new_xml_root is None:
             #raise Exception("Invalid XML response from server")
+            # Note: Actually, this appears to be the normal response! (200)
             pass
         else:
             self.xml_root = new_xml_root
@@ -329,11 +330,11 @@ class Collection(DNGRequest):
         return self._requirements
 
     def add_requirements(self, uri_list: Iterable):
-        self.requirement_set().union(set(uri_list))
+        self._requirements = self.requirement_set().union(set(uri_list))
         pass
 
     def remove_requirements(self, uri_list: Iterable):
-        self.requirement_set().remove(set(uri_list))
+        self._requirements = self.requirement_set().remove(set(uri_list))
 
 
 
