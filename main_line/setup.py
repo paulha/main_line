@@ -1,16 +1,15 @@
 from distutils.core import setup
 
 install_requires = {
-    'json',
-    'requests',
-    'git+http://github.com/paulha/utility_funcs.git',
+    'PyYAML',
+    'urllib3',
 }
 
 setup(
-    name='jama_client',
+    name='main_line',
     version='0.1',
     packages=[''],
-    package_dir={'': '../jama_client'},
+    package_dir={'': '../main_line'},
     url='',
     license='',
     author='paulhanchett',
