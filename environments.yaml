@@ -27,6 +27,6 @@ analyse:
     jazz_server: production
     requirement_collection_path: 'Programs/Keystone Lake Development Vehicle (KSL-DV)'
     # requirement_collection_name: 'Keystone Lake Development Vehicle | AaaG | P'
-    requirement_collection_name: 'Keystone Lake Development Vehicle | Bare Metal | P'
-    # requirement_collection_name: 'Paul Test'
+    # requirement_collection_name: 'Keystone Lake Development Vehicle | Bare Metal | P'
+    requirement_collection_name: 'Paul Test'
 
