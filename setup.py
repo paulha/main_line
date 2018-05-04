@@ -8,11 +8,12 @@ install_requires = {
 setup(
     name='main_line',
     version='0.1',
-    packages=[''],
+    packages=['main_line'],
     package_dir={'': 'main_line'},
-    url='',
+    url='https://github.com/paulha/main_line.git',
     license='',
-    author='paulhanchett',
+    author='Paul Hanchett',
     author_email='paul.hanchett@gmail.com',
-    description=''
+    description='',
+    zip_safe=False
 )
