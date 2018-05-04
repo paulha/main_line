@@ -9,7 +9,7 @@ setup(
     name='main_line',
     version='0.1',
     packages=['main_line'],
-    package_dir={'': 'main_line'},
+    # package_dir={'': 'main_line'},
     url='https://github.com/paulha/main_line.git',
     license='',
     author='Paul Hanchett',
