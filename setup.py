@@ -9,7 +9,7 @@ setup(
     name='main_line',
     version='0.1',
     packages=[''],
-    package_dir={'': '../main_line'},
+    package_dir={'': 'main_line'},
     url='',
     license='',
     author='paulhanchett',
