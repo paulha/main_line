@@ -1,4 +1,8 @@
 # os
+
+#
+# -- if this PyYAML line fails on Windows, try installing the (free) version of Visual Studio
+#    to get the missing library...
 PyYAML
 pysocks
 lxml

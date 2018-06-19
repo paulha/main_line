@@ -10,7 +10,9 @@ setup(
     version='0.1',
     packages=['main_line'],
     # package_dir={'': 'main_line'},
-    url='https://github.com/paulha/main_line.git',
+    url='exit()'
+        ''
+        '',
     license='',
     author='Paul Hanchett',
     author_email='paul.hanchett@gmail.com',
